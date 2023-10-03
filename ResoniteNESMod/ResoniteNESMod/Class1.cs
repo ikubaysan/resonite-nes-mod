@@ -9,7 +9,6 @@ using System;
 using System.Reflection;
 using FrooxEngine;
 using FrooxEngine.UIX;
-using BaseX;
 
 
 namespace ResoniteNESMod
@@ -33,28 +32,45 @@ namespace ResoniteNESMod
             Harmony harmony = new Harmony("com.ikubaysan.ResoniteNESMod");
             harmony.PatchAll();
 
-            Debug("a debug log from ResoniteNESMod..");
-            Msg("a regular log from ResoniteNESMod..");
-            Warn("a warn log from ResoniteNESMod..");
-            Error("an error log from ResoniteNESMod..");
+            Debug("a debug log from ResoniteNESMod...");
+            Msg("a regular log from ResoniteNESMod...");
+            Warn("a warn log from ResoniteNESMod...");
+            Error("an error log from ResoniteNESMod...");
         }
 
-        [HarmonyPatch(typeof(Canvas), "OnActivated")]
+        // OnAttach() is called whenever a Canvas is spawned (as well as any time a component is attached to a Canvas)
+        [HarmonyPatch(typeof(Canvas), "OnAttach")]
         class ReosoniteNESModPatcher
         {
-
+            private const string CANVAS_SLOT_NAME = "UIXCanvas";
+            
+            /*
             static void Prefix(Canvas __instance)
             {
-                //if (!Config.GetValue(ENABLED) && __instance.Slot.Name != "Custom Inspector Panel")
-                //if (!Config.GetValue(ENABLED)) return;
-                Msg("ResoniteNESMod Prefix - Canvas Activated Loading Patched!!");
+                if (__instance.Slot.Name != CANVAS_SLOT_NAME)
+                {
+                    Msg("Slot name of " + __instance.Slot.Name + " does not match the constant: " + CANVAS_SLOT_NAME);
+                    return;
+                }
+                // Slot name matches the constant
+                Msg("Matched with the slot name: " + __instance.Slot.Name);
             }
+            */
 
             static void Postfix(Canvas __instance)
             {
-                //if (!Config.GetValue(ENABLED) && __instance.Slot.Name != "Custom Inspector Panel")
-                //if (!Config.GetValue(ENABLED)) return;
-                Msg("ResoniteNESMod Postfix - Canvas Activated Loading Patched!!");
+                if (__instance.Slot.Name != CANVAS_SLOT_NAME)
+                {
+                    Msg("Slot name of " + __instance.Slot.Name + " does not match the constant: " + CANVAS_SLOT_NAME);
+                    return;
+                }
+
+                // Slot name matches the constant
+                Msg("Matched with the slot name: " + __instance.Slot.Name);
+
+                __instance.Slot.Name = "VeryCoolModded_" + __instance.Slot.Name;
+
+                Msg("Changed the slot name to: " + __instance.Slot.Name);
             }
         }
     }
