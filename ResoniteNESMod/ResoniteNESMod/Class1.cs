@@ -9,7 +9,7 @@ using System;
 using System.Reflection;
 using FrooxEngine;
 using FrooxEngine.UIX;
-
+using Elements.Core;
 
 namespace ResoniteNESMod
 {
@@ -21,7 +21,13 @@ namespace ResoniteNESMod
 
 
         [AutoRegisterConfigKey]
-        private static readonly ModConfigurationKey<bool> ENABLED = new ModConfigurationKey<bool>("enabled", "Should the mod be enabled", () => true); 
+        private static readonly ModConfigurationKey<bool> ENABLED = new ModConfigurationKey<bool>("enabled", "Should the mod be enabled?", () => true);
+        [AutoRegisterConfigKey]
+        private static readonly ModConfigurationKey<int> CANVAS_SLOT_WIDTH = new ModConfigurationKey<int>("canvas_slot_width", "The width of the canvas slot", () => 50);
+        [AutoRegisterConfigKey]
+        private static readonly ModConfigurationKey<int> CANVAS_SLOT_HEIGHT = new ModConfigurationKey<int>("canvas_slot_height", "The height of the canvas slot", () => 50);
+        [AutoRegisterConfigKey]
+        private static readonly ModConfigurationKey<string> CANVAS_SLOT_NAME = new ModConfigurationKey<string>("canvas_slot_name", "The name of the canvas slot", () => "UIXCanvas");
 
         private static ModConfiguration Config; //If you use config settings, this will be where you interface with them
 
@@ -46,41 +52,26 @@ namespace ResoniteNESMod
 
         class ReosoniteNESModPatcher
         {
-            private const string CANVAS_SLOT_NAME = "UIXCanvas";
-            private const int CANVAS_SLOT_WIDTH = 50;
-            private const int CANVAS_SLOT_HEIGHT = 50;
-            
             static void Postfix(Canvas __instance)
             {
-
                 if (!Config.GetValue(ENABLED)) return;
+                if (__instance.Slot.Name != Config.GetValue(CANVAS_SLOT_NAME)) return;
 
-                if (__instance.Slot.Name != CANVAS_SLOT_NAME)
-                {
-                    /*
-                    Msg("Slot name of " + __instance.Slot.Name + " does not match the constant: " + "UIXCanvas");
-                    Msg("Parent name: " + __instance.Slot.Parent.Name);
-
-                    // Print a list of the child names as 1 line
-                    string childNames = "";
-                    foreach (Slot child in __instance.Slot.Children)
-                    {
-                        childNames += child.Name + ", ";
-                    }
-                    Msg("Child names: " + childNames);
-                    */
-                    return;
-                }
+                // Retrieve the values of configuration keys at the time the method is called
+                int canvasSlotWidth = Config.GetValue(CANVAS_SLOT_WIDTH);
+                int canvasSlotHeight = Config.GetValue(CANVAS_SLOT_HEIGHT);
+                string canvasSlotName = Config.GetValue(CANVAS_SLOT_NAME);
 
                 // Slot name matches the constant
                 Msg("Matched with the slot name: " + __instance.Slot.Name);
 
                 __instance.Slot.Name = "VeryCoolModded_" + __instance.Slot.Name;
+                
+
+                __instance.Slot.GetComponent<Canvas>().Size.Value = new int2(canvasSlotWidth, canvasSlotHeight);
+
 
                 Msg("Changed the slot name to: " + __instance.Slot.Name);
-
-
-
 
                 Slot backgroundSlot = __instance.Slot.FindChild("Background");
                 if (backgroundSlot == null)
@@ -116,21 +107,34 @@ namespace ResoniteNESMod
                 Msg("Destroyed all children of the content slot: " + contentSlot.Name);
 
                 // Create new HorizontalLayouts according to the height constant
-                
+
+                Random rand = new Random();
+
                 // For the count of the height constant, call contentSlot.AddSlot
-                for (int i = 0; i < CANVAS_SLOT_HEIGHT; i++)
+                for (int i = 0; i < canvasSlotHeight; i++)
                 {
                     Slot horizontalLayoutSlot = contentSlot.AddSlot("HorizontalLayout" + i);
-                    horizontalLayoutSlot.AttachComponent<HorizontalLayout>();
+                    horizontalLayoutSlot.AttachComponent<RectTransform>();
+                    HorizontalLayout horizontalLayoutComponent = horizontalLayoutSlot.AttachComponent<HorizontalLayout>();
+                    horizontalLayoutComponent.PaddingTop.Value = i;
+                    horizontalLayoutComponent.PaddingBottom.Value = canvasSlotHeight - i - 1;
 
                     // Add a slot for each column in the horizontal layout
-                    for (int j = 0; j < CANVAS_SLOT_WIDTH; j++)
+                    for (int j = 0; j < canvasSlotWidth; j++)
                     {
-                        Slot slot = horizontalLayoutSlot.AddSlot("VerticalSlot" + j);
+                        Slot verticalSlot = horizontalLayoutSlot.AddSlot("VerticalSlot" + j);
+                        verticalSlot.AttachComponent<RectTransform>();
+                        Image imageComponent = verticalSlot.AttachComponent<Image>();
+                        // Set the tint to a random color
+                        imageComponent.Tint.Value = new colorX(
+                            (float) rand.NextDouble(), 
+                            (float) rand.NextDouble(), 
+                            (float) rand.NextDouble(), 
+                            1);
                     }
                 }
 
-                Msg("Created new HorizontalLayouts according to the height constant: " + 50);
+                Msg("Created new HorizontalLayouts according to the height constant: " + canvasSlotHeight);
             }
         }
     }
