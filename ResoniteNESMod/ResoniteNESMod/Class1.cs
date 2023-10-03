@@ -33,24 +33,28 @@ namespace ResoniteNESMod
             Harmony harmony = new Harmony("com.ikubaysan.ResoniteNESMod");
             harmony.PatchAll();
 
-            Debug("a debug log from ResoniteNESMod!!!");
-            Msg("a regular log from ResoniteNESMod!!!");
-            Warn("a warn log from ResoniteNESMod!!!");
-            Error("an error log from ResoniteNESMod!!!");
+            Debug("a debug log from ResoniteNESMod..");
+            Msg("a regular log from ResoniteNESMod..");
+            Warn("a warn log from ResoniteNESMod..");
+            Error("an error log from ResoniteNESMod..");
         }
 
-        [HarmonyPatch(typeof(Canvas), nameof(Canvas.Release))]
+        [HarmonyPatch(typeof(Canvas), "OnActivated")]
         class ReosoniteNESModPatcher
         {
 
             static void Prefix(Canvas __instance)
             {
-                Debug("ResoniteNESMod Prefix - Canvas Release Patched!!");
+                //if (!Config.GetValue(ENABLED) && __instance.Slot.Name != "Custom Inspector Panel")
+                //if (!Config.GetValue(ENABLED)) return;
+                Msg("ResoniteNESMod Prefix - Canvas Activated Loading Patched!!");
             }
 
             static void Postfix(Canvas __instance)
             {
-                Debug("ResoniteNESMod Postfix - Canvas Release Patched!!");
+                //if (!Config.GetValue(ENABLED) && __instance.Slot.Name != "Custom Inspector Panel")
+                //if (!Config.GetValue(ENABLED)) return;
+                Msg("ResoniteNESMod Postfix - Canvas Activated Loading Patched!!");
             }
         }
     }
