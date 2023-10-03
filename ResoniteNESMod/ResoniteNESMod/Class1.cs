@@ -7,6 +7,10 @@ using HarmonyLib;
 using ResoniteModLoader;
 using System;
 using System.Reflection;
+using FrooxEngine;
+using FrooxEngine.UIX;
+using BaseX;
+
 
 namespace ResoniteNESMod
 {
@@ -18,7 +22,7 @@ namespace ResoniteNESMod
 
 
         [AutoRegisterConfigKey]
-        private static readonly ModConfigurationKey<bool> enabled = new ModConfigurationKey<bool>("enabled", "Should the mod be enabled", () => true); //Optional config settings
+        private static readonly ModConfigurationKey<bool> ENABLED = new ModConfigurationKey<bool>("enabled", "Should the mod be enabled", () => true); //Optional config settings
 
         private static ModConfiguration Config;//If you use config settings, this will be where you interface with them
 
@@ -26,17 +30,28 @@ namespace ResoniteNESMod
         {
             Config = GetConfiguration(); //Get this mods' current ModConfiguration
             Config.Save(true); //If you'd like to save the default config values to file
-            Harmony harmony = new Harmony("com.ikubaysan.ResoniteNESMod"); //typically a reverse domain name is used here (https://en.wikipedia.org/wiki/Reverse_domain_name_notation)
-            harmony.PatchAll(); // do whatever LibHarmony patching you need, this will patch all [HarmonyPatch()] instances
+            Harmony harmony = new Harmony("com.ikubaysan.ResoniteNESMod");
+            harmony.PatchAll();
 
-            //Various log methods provided by the mod loader, below is an example of how they will look
-            //3:14:42 AM.069 ( -1 FPS)  [INFO] [ResoniteModLoader/ExampleMod] a regular log
             Debug("a debug log from ResoniteNESMod!!!");
             Msg("a regular log from ResoniteNESMod!!!");
             Warn("a warn log from ResoniteNESMod!!!");
             Error("an error log from ResoniteNESMod!!!");
         }
 
+        [HarmonyPatch(typeof(Canvas), nameof(Canvas.Release))]
+        class ReosoniteNESModPatcher
+        {
 
+            static void Prefix(Canvas __instance)
+            {
+                Debug("ResoniteNESMod Prefix - Canvas Release Patched!!");
+            }
+
+            static void Postfix(Canvas __instance)
+            {
+                Debug("ResoniteNESMod Postfix - Canvas Release Patched!!");
+            }
+        }
     }
 }
