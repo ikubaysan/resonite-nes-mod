@@ -1,0 +1,9 @@
+C:\Users\PC\Desktop\misc\coding\repos\public\resonite-nes-mod\ResoniteNESMod\ResoniteNESMod\bin\Debug\ResoniteNESMod.dll
+C:\Users\PC\Desktop\misc\coding\repos\public\resonite-nes-mod\ResoniteNESMod\ResoniteNESMod\bin\Debug\ResoniteNESMod.pdb
+C:\Users\PC\Desktop\misc\coding\repos\public\resonite-nes-mod\ResoniteNESMod\ResoniteNESMod\bin\Debug\0Harmony.dll
+C:\Users\PC\Desktop\misc\coding\repos\public\resonite-nes-mod\ResoniteNESMod\ResoniteNESMod\bin\Debug\ResoniteModLoader.dll
+C:\Users\PC\Desktop\misc\coding\repos\public\resonite-nes-mod\ResoniteNESMod\ResoniteNESMod\obj\Debug\ResoniteNESMod.csproj.AssemblyReference.cache
+C:\Users\PC\Desktop\misc\coding\repos\public\resonite-nes-mod\ResoniteNESMod\ResoniteNESMod\obj\Debug\ResoniteNESMod.csproj.CoreCompileInputs.cache
+C:\Users\PC\Desktop\misc\coding\repos\public\resonite-nes-mod\ResoniteNESMod\ResoniteNESMod\obj\Debug\ResoniteNESMod.csproj.CopyComplete
+C:\Users\PC\Desktop\misc\coding\repos\public\resonite-nes-mod\ResoniteNESMod\ResoniteNESMod\obj\Debug\ResoniteNESMod.dll
+C:\Users\PC\Desktop\misc\coding\repos\public\resonite-nes-mod\ResoniteNESMod\ResoniteNESMod\obj\Debug\ResoniteNESMod.pdb
