@@ -123,6 +123,24 @@ namespace ResoniteNESApp
             return bmp;
         }
 
+
+
+        private int PackRGB(int r, int g, int b)
+        {
+            return 1000000000 + r * 1000000 + g * 1000 + b;
+        }
+
+
+        private (int R, int G, int B) UnpackRGB(int packedRGB)
+        {
+            int b = packedRGB % 1000;
+            int g = (packedRGB / 1000) % 1000;
+            int r = (packedRGB / 1000000) % 1000;
+            return (r, g, b);
+        }
+
+
+
         private List<int> GeneratePixelDataFromFCEUX(int width, int height, bool forceFullFrame)
         {
             Bitmap bmp = CaptureFCEUXWindow();
@@ -139,13 +157,12 @@ namespace ResoniteNESApp
                 {
                     Color pixel = bmp.GetPixel(x, y);
                     Color currentPixel = _currentBitmap.GetPixel(x, y);
-                    if (forceFullFrame || !(currentPixel.R == pixel.R && currentPixel.G == pixel.G && currentPixel.B == pixel.B))
+                    if (forceFullFrame || !currentPixel.Equals(pixel))
                     {
-                        pixelData.Add(x); // row index
-                        pixelData.Add(y); // column index
-                        pixelData.Add(pixel.R);
-                        pixelData.Add(pixel.G);
-                        pixelData.Add(pixel.B);
+                        int packedRGB = PackRGB(pixel.R, pixel.G, pixel.B);
+                        pixelData.Add(x);
+                        pixelData.Add(y);
+                        pixelData.Add(packedRGB);  // Add packed RGB value
                     }
                 }
             }
@@ -159,15 +176,12 @@ namespace ResoniteNESApp
         private Bitmap SetPixelDataToBitmap(List<int> pixelData, int width, int height)
         {
             int updates = 0;
-            for (int i = 0; i < pixelData.Count - 1; i += 5)
+            for (int i = 0; i < pixelData.Count - 1; i += 3)  // Changed 5 to 3 because each pixel is now represented by 3 data points (x, y, packedRGB)
             {
                 int x = pixelData[i];
                 int y = pixelData[i + 1];
-                Color newPixelColor = Color.FromArgb(
-                    pixelData[i + 2], // R
-                    pixelData[i + 3], // G
-                    pixelData[i + 4]  // B
-                );
+                var (R, G, B) = UnpackRGB(pixelData[i + 2]);  // Unpack RGB from the packed value
+                Color newPixelColor = Color.FromArgb(R, G, B);
                 _currentBitmap.SetPixel(x, y, newPixelColor);
                 updates++;
             }
@@ -181,14 +195,14 @@ namespace ResoniteNESApp
             {
                 if (_memoryMappedFile == null)
                 {
-                    _memoryMappedFile = MemoryMappedFile.CreateOrOpen(MemoryMappedFileName, MemoryMappedFileSize);
+                    _memoryMappedFile = MemoryMappedFile.CreateNew(MemoryMappedFileName, MemoryMappedFileSize);
                 }
 
                 using (MemoryMappedViewStream stream = _memoryMappedFile.CreateViewStream())
                 using (BinaryWriter writer = new BinaryWriter(stream))
                 {
                     // Write the count of pixels first.
-                    writer.Write(pixelData.Count / 5);  // Because each pixel has 5 data points.
+                    writer.Write(pixelData.Count / 3);  // Because each pixel has 3 data points (x, y, packedRGB)
 
                     // Then write the pixel data
                     foreach (int value in pixelData)
@@ -218,8 +232,8 @@ namespace ResoniteNESApp
                         // Read the count of pixels that have changed.
                         int changedPixelsCount = reader.ReadInt32();
 
-                        // Considering each pixel has 5 data points (x, y, r, g, b)
-                        int dataToRead = changedPixelsCount * 5;
+                        // Considering each pixel has 5 data points (x, y, packedRGB)
+                        int dataToRead = changedPixelsCount * 3;
 
                         for (int i = 0; i < dataToRead; i++)
                         {
