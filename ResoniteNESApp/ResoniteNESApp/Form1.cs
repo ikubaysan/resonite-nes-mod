@@ -40,9 +40,12 @@ namespace ResoniteNESApp
         private const string MemoryMappedFileName = "ResonitePixelData";
         private const int FRAME_WIDTH = 256;
         private const int FRAME_HEIGHT = 240;
+        private const int FPS = 36;
         private const int MemoryMappedFileSize = FRAME_WIDTH * FRAME_HEIGHT * 5 * sizeof(int);
         private MemoryMappedFile _memoryMappedFile;
         private Bitmap _currentBitmap = new Bitmap(FRAME_WIDTH, FRAME_HEIGHT);
+        private const int FULL_FRAME_INTERVAL = 5000; // 5 seconds in milliseconds
+        private DateTime _lastFullFrameTime = DateTime.MinValue;
 
         public Form1()
         {
@@ -53,7 +56,7 @@ namespace ResoniteNESApp
         private void Form1_Load(object sender, EventArgs e)
         {
             _timer = new Timer();
-            _timer.Interval = 200; // 0.2 seconds
+            _timer.Interval = (int)((1.0 / FPS) * 1000);
             _timer.Tick += Timer_Tick;
             _timer.Start();
 
@@ -67,6 +70,13 @@ namespace ResoniteNESApp
         {
             if (!checkBox1.Checked) return;
 
+            bool forceFullFrame = false;
+            if ((DateTime.Now - _lastFullFrameTime).TotalMilliseconds >= FULL_FRAME_INTERVAL)
+            {
+                forceFullFrame = true;
+                _lastFullFrameTime = DateTime.Now;
+            }
+
             // Generate pixel data
             var pixelData = GeneratePixelDataFromFCEUX(FRAME_WIDTH, FRAME_HEIGHT);
             if (pixelData == null) return;
@@ -78,7 +88,7 @@ namespace ResoniteNESApp
             var readPixelData = ReadFromMemoryMappedFile();
 
             // Convert pixel data to Bitmap and set to PictureBox
-            pictureBox1.Image = ConvertPixelDataToBitmap(readPixelData, FRAME_WIDTH, FRAME_HEIGHT);
+            pictureBox1.Image = ConvertPixelDataToBitmap(readPixelData, FRAME_WIDTH, FRAME_HEIGHT, forceFullFrame);
         }
 
 
@@ -112,7 +122,6 @@ namespace ResoniteNESApp
             return bmp;
         }
 
-
         private List<int> GeneratePixelDataFromFCEUX(int width, int height)
         {
             Bitmap bmp = CaptureFCEUXWindow();
@@ -141,7 +150,7 @@ namespace ResoniteNESApp
         }
 
         // Convert pixel data into a Bitmap
-        private Bitmap ConvertPixelDataToBitmap(List<int> pixelData, int width, int height)
+        private Bitmap ConvertPixelDataToBitmap(List<int> pixelData, int width, int height, bool forceFullFrame)
         {
             int updates = 0;
             // Use the existing bitmap.
@@ -156,13 +165,14 @@ namespace ResoniteNESApp
                 );
 
                 // Check if the color has changed. If so, update.
-                if (_currentBitmap.GetPixel(x, y) != newPixelColor)
+                // Or if forceFullFrame is true, update regardless of change.
+                if (forceFullFrame || _currentBitmap.GetPixel(x, y) != newPixelColor)
                 {
                     _currentBitmap.SetPixel(x, y, newPixelColor);
                     updates++;
                 }
             }
-            Console.WriteLine("Updated " + updates + " pixels");
+            Console.WriteLine(updates + " pixels changed since previous frame. forceFullFrame: " + forceFullFrame);
             return _currentBitmap; // Return the updated bitmap.
         }
 
