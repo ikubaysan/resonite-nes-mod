@@ -46,8 +46,6 @@ namespace ResoniteNESMod
 
         // OnAttach() is called whenever a new Canvas is created, but not when I spawn one from Inventory.
         //[HarmonyPatch(typeof(Canvas), "OnAttach")]
-        //[HarmonyPatch(typeof(Canvas), "OnAttach")]
-        //[HarmonyPatch(typeof(Canvas), "OnAwake")]
         [HarmonyPatch(typeof(Canvas), "FinishCanvasUpdate")]  // (many hits, but matched for once)
 
         class ReosoniteNESModPatcher
@@ -90,8 +88,6 @@ namespace ResoniteNESMod
 
                 // Slot name matches the constant
                 Msg("Matched with the slot name: " + __instance.Slot.Name);
-
-                //__instance.Slot.Name = "VeryCoolModded_" + __instance.Slot.Name;
 
                 __instance.Slot.GetComponent<Canvas>().Size.Value = new float2(canvasSlotWidth, canvasSlotHeight);
                 Msg("Set the size of the canvas to: " + __instance.Slot.GetComponent<Canvas>().Size.Value);
@@ -228,19 +224,6 @@ namespace ResoniteNESMod
 
                 }
             }
-
-            /*
-            [HarmonyPatch(typeof(FrooxEngine.Userspace), "OnCommonUpdate")]
-            public static class UserspaceOnCommonUpdatePatcher
-            {
-                public static void Postfix()
-                {
-                    Msg("UserspaceOnCommonUpdatePatcher.Postfix() called");
-                }
-            }
-            */
-
-
         }
     }
 }
