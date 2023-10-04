@@ -17,7 +17,9 @@ namespace ResoniteNESApp
         private Timer _timer;
         private Random _random;
         private const string MemoryMappedFileName = "ResonitePixelData";
-        private const int MemoryMappedFileSize = 25 * 25 * 5 * sizeof(int); // Assuming a maximum of 25x25 image and 5 ints per pixel
+        private const int FRAME_WIDTH = 256;
+        private const int FRAME_HEIGHT = 240;
+        private const int MemoryMappedFileSize = FRAME_WIDTH * FRAME_HEIGHT * 5 * sizeof(int);
         private MemoryMappedFile _memoryMappedFile;
 
         public Form1()
@@ -29,9 +31,13 @@ namespace ResoniteNESApp
         private void Form1_Load(object sender, EventArgs e)
         {
             _timer = new Timer();
-            _timer.Interval = 1000; // 1 second
+            _timer.Interval = 200; // 0.2 seconds
             _timer.Tick += Timer_Tick;
             _timer.Start();
+
+            pictureBox1.Width = FRAME_WIDTH;
+            pictureBox1.Height = FRAME_HEIGHT;
+
             Console.WriteLine("Form loaded");
         }
 
@@ -40,7 +46,7 @@ namespace ResoniteNESApp
             if (!checkBox1.Checked) return;
 
             // Generate pixel data
-            var pixelData = GenerateRandomPixelData(25, 25);
+            var pixelData = GenerateRandomPixelData(FRAME_WIDTH, FRAME_HEIGHT);
 
             // Write to MemoryMappedFile
             WriteToMemoryMappedFile(pixelData);
@@ -49,7 +55,7 @@ namespace ResoniteNESApp
             var readPixelData = ReadFromMemoryMappedFile();
 
             // Convert pixel data to Bitmap and set to PictureBox
-            pictureBox1.Image = ConvertPixelDataToBitmap(readPixelData, 25, 25);
+            pictureBox1.Image = ConvertPixelDataToBitmap(readPixelData, FRAME_WIDTH, FRAME_HEIGHT);
         }
 
         // Generate random pixel data in the specified format:
