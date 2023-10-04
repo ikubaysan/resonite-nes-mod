@@ -10,6 +10,9 @@ using System.Reflection;
 using FrooxEngine;
 using FrooxEngine.UIX;
 using Elements.Core;
+using System.IO.MemoryMappedFiles;
+using System.IO;
+
 
 namespace ResoniteNESMod
 {
@@ -23,9 +26,9 @@ namespace ResoniteNESMod
         [AutoRegisterConfigKey]
         private static readonly ModConfigurationKey<bool> ENABLED = new ModConfigurationKey<bool>("enabled", "Should the mod be enabled?", () => true);
         [AutoRegisterConfigKey]
-        private static readonly ModConfigurationKey<int> CANVAS_SLOT_WIDTH = new ModConfigurationKey<int>("canvas_slot_width", "The width of the canvas slot", () => 50);
+        private static readonly ModConfigurationKey<int> CANVAS_SLOT_WIDTH = new ModConfigurationKey<int>("canvas_slot_width", "The width of the canvas slot", () => 256);
         [AutoRegisterConfigKey]
-        private static readonly ModConfigurationKey<int> CANVAS_SLOT_HEIGHT = new ModConfigurationKey<int>("canvas_slot_height", "The height of the canvas slot", () => 50);
+        private static readonly ModConfigurationKey<int> CANVAS_SLOT_HEIGHT = new ModConfigurationKey<int>("canvas_slot_height", "The height of the canvas slot", () => 240);
         [AutoRegisterConfigKey]
         private static readonly ModConfigurationKey<string> CANVAS_SLOT_NAME = new ModConfigurationKey<string>("canvas_slot_name", "The name of the canvas slot", () => "NESUIXCanvas");
 
@@ -53,6 +56,9 @@ namespace ResoniteNESMod
             private static DateTime _lastColorSetTimestamp = DateTime.MinValue;
             private static bool initialized = false;
             private static Canvas _latestCanvasInstance;
+            private static MemoryMappedFile _memoryMappedFile;
+            private const string MemoryMappedFileName = "ResonitePixelData";
+
 
             static void Postfix(Canvas __instance)
             {
@@ -156,34 +162,19 @@ namespace ResoniteNESMod
                 Msg("Created new HorizontalLayouts according to the height constant: " + canvasSlotHeight);
             }
 
-            static void SetRandomColors(Canvas __instance)
+            static void SetPixelDataToCanvas(Canvas __instance, List<int> pixelData)
             {
                 Slot contentSlot = __instance.Slot.FindChild("Background")
-                                                 .FindChild("Image")
-                                                 .FindChild("Content");
+                                 .FindChild("Image")
+                                 .FindChild("Content");
+
                 if (contentSlot == null)
-                { 
+                {
                     Warn("Could not find content slot");
                 }
-                Msg("Found content slot: " + contentSlot.Name);
+                //Msg("Found content slot: " + contentSlot.Name);
 
-                Random rand = new Random();
-
-                foreach (Slot horizontalLayoutSlot in contentSlot.Children)
-                {
-                    foreach (Slot verticalSlot in horizontalLayoutSlot.Children)
-                    {
-                        Image imageComponent = verticalSlot.GetComponent<Image>();
-                        if (imageComponent != null)
-                        {
-                            imageComponent.Tint.Value = new colorX(
-                                (float)rand.NextDouble(),
-                                (float)rand.NextDouble(),
-                                (float)rand.NextDouble(),
-                                1);
-                        }
-                    }
-                }
+                Msg("pixelData length: " + pixelData.Count);
             }
 
 
@@ -193,24 +184,32 @@ namespace ResoniteNESMod
             {
                 public static void Postfix()
                 {
-                    Msg("AnimatorOnCommonUpdatePatcher.Postfix() called");
+                    //Msg("AnimatorOnCommonUpdatePatcher.Postfix() called");
 
 
                     if (initialized && _latestCanvasInstance != null && (Config.GetValue(ENABLED)))
                     {
                         TimeSpan timeSinceLastSet = DateTime.UtcNow - _lastColorSetTimestamp;
-                        // NES games run up to 60 FPS, so there's no point in updating the colors more often than that.
-                        if (timeSinceLastSet.TotalSeconds < (1.0 / 60.0)) return;
+                        // Check the memory mapped file for new data every 1/36th of a second
+                        if (timeSinceLastSet.TotalSeconds < (1.0 / 36.0)) return;
 
-                        Msg("Setting random colors for initialized canvas " + _latestCanvasInstance.Slot.Name);
+                        Msg("Updating frame for initialized canvas " + _latestCanvasInstance.Slot.Name);
+
+                        var readPixelData = ReadFromMemoryMappedFile();
+                        if (readPixelData == null)
+                        {
+                            Error("Failed to read from memory mapped file");
+                            return;
+                        }
+
 
                         try
                         {
-                            SetRandomColors(_latestCanvasInstance);
+                            SetPixelDataToCanvas(_latestCanvasInstance, readPixelData);
                         }
                         catch (Exception e)
                         {
-                            Error("Failed to set random colors for initialized canvas " + _latestCanvasInstance.Slot.Name);
+                            Error("Failed to update frame for initialized canvas " + _latestCanvasInstance.Slot.Name);
                             Error(e.ToString());
                             initialized = false;
                             Error("Set initialized to false.");
@@ -222,6 +221,30 @@ namespace ResoniteNESMod
                         return;
                     }
 
+                }
+
+
+                public static List<int> ReadFromMemoryMappedFile()
+                {
+                    var pixelData = new List<int>();
+                    try
+                    {
+                        _memoryMappedFile = MemoryMappedFile.OpenExisting(MemoryMappedFileName);
+                        using (MemoryMappedViewStream stream = _memoryMappedFile.CreateViewStream())
+                        using (BinaryReader reader = new BinaryReader(stream))
+                        {
+                            while (stream.Position < stream.Length)
+                            {
+                                pixelData.Add(reader.ReadInt32());
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Error("Error reading from MemoryMappedFile: " + ex.Message);
+                        pixelData = null;
+                    }
+                    return pixelData;
                 }
             }
         }

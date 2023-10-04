@@ -86,9 +86,10 @@ namespace ResoniteNESApp
 
             // Read from MemoryMappedFile
             var readPixelData = ReadFromMemoryMappedFile();
+            if (readPixelData == null) return;
 
             // Convert pixel data to Bitmap and set to PictureBox
-            pictureBox1.Image = ConvertPixelDataToBitmap(readPixelData, FRAME_WIDTH, FRAME_HEIGHT, forceFullFrame);
+            pictureBox1.Image = SetPixelDataToBitmap(readPixelData, FRAME_WIDTH, FRAME_HEIGHT, forceFullFrame);
         }
 
 
@@ -150,7 +151,7 @@ namespace ResoniteNESApp
         }
 
         // Convert pixel data into a Bitmap
-        private Bitmap ConvertPixelDataToBitmap(List<int> pixelData, int width, int height, bool forceFullFrame)
+        private Bitmap SetPixelDataToBitmap(List<int> pixelData, int width, int height, bool forceFullFrame)
         {
             int updates = 0;
             // Use the existing bitmap.
@@ -221,11 +222,13 @@ namespace ResoniteNESApp
                 else
                 {
                     Console.WriteLine("MemoryMappedFile has not been created yet.");
+                    return null;
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine("Error reading from MemoryMappedFile: " + ex.Message);
+                return null;
             }
             return pixelData;
         }
