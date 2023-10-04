@@ -27,7 +27,7 @@ namespace ResoniteNESMod
         [AutoRegisterConfigKey]
         private static readonly ModConfigurationKey<int> CANVAS_SLOT_HEIGHT = new ModConfigurationKey<int>("canvas_slot_height", "The height of the canvas slot", () => 50);
         [AutoRegisterConfigKey]
-        private static readonly ModConfigurationKey<string> CANVAS_SLOT_NAME = new ModConfigurationKey<string>("canvas_slot_name", "The name of the canvas slot", () => "UIXCanvas");
+        private static readonly ModConfigurationKey<string> CANVAS_SLOT_NAME = new ModConfigurationKey<string>("canvas_slot_name", "The name of the canvas slot", () => "NESUIXCanvas");
 
         private static ModConfiguration Config; //If you use config settings, this will be where you interface with them
 
@@ -44,7 +44,7 @@ namespace ResoniteNESMod
             Error("an error log from ResoniteNESMod...");
         }
 
-        // OnAttach() is called whenever a Canvas is spawned (as well as any time a component is attached to a Canvas)
+        // OnAttach() is called whenever a new Canvas is created, but not when I spawn one from Inventory.
         //[HarmonyPatch(typeof(Canvas), "OnAttach")]
         //[HarmonyPatch(typeof(Canvas), "OnAttach")]
         //[HarmonyPatch(typeof(Canvas), "OnAwake")]
