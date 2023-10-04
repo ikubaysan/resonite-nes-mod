@@ -54,38 +54,16 @@ namespace ResoniteNESMod
         {
             private static DateTime _lastColorSetTimestamp = DateTime.MinValue;
             private static bool initialized = false;
+            private static Canvas _latestCanvasInstance;
 
             static void Postfix(Canvas __instance)
             {
                 if (!Config.GetValue(ENABLED)) return;
                 if (__instance.Slot.Name != Config.GetValue(CANVAS_SLOT_NAME)) return;
+                _latestCanvasInstance = __instance;
 
-                if (initialized)
-                {
-                    TimeSpan timeSinceLastSet = DateTime.UtcNow - _lastColorSetTimestamp;
-                    //if (timeSinceLastSet.TotalSeconds < (1.0 / 60.0)) return;
-                    if (timeSinceLastSet.TotalSeconds < 1.0) return;
 
-                    Msg("Setting random colors for initialized canvas " + __instance.Slot.Name);
-
-                    try
-                    {
-                        SetRandomColors(__instance);
-                    }
-                    catch (Exception e)
-                    {
-                        Error("Failed to set random colors for initialized canvas " + __instance.Slot.Name);
-                        Error(e.ToString());
-                        initialized = false;
-                        Error("Set initialized to false.");
-                        return;
-                    }
-
-                    _lastColorSetTimestamp = DateTime.UtcNow;
-                    Msg("Set random colors for initialized canvas " + __instance.Slot.Name);
-                    return;
-                }
-                else
+                if (!initialized)
                 {
                     Msg("Canvas must be initialized");
                     try
@@ -115,7 +93,8 @@ namespace ResoniteNESMod
 
                 //__instance.Slot.Name = "VeryCoolModded_" + __instance.Slot.Name;
 
-                __instance.Slot.GetComponent<Canvas>().Size.Value = new int2(canvasSlotWidth, canvasSlotHeight);
+                __instance.Slot.GetComponent<Canvas>().Size.Value = new float2(canvasSlotWidth, canvasSlotHeight);
+                Msg("Set the size of the canvas to: " + __instance.Slot.GetComponent<Canvas>().Size.Value);
 
                 Msg("Changed the slot name to: " + __instance.Slot.Name);
 
@@ -210,6 +189,58 @@ namespace ResoniteNESMod
                     }
                 }
             }
+
+
+
+            [HarmonyPatch(typeof(FrooxEngine.Animator), "OnCommonUpdate")]
+            public static class AnimatorOnCommonUpdatePatcher
+            {
+                public static void Postfix()
+                {
+                    Msg("AnimatorOnCommonUpdatePatcher.Postfix() called");
+
+
+                    if (initialized && _latestCanvasInstance != null && (Config.GetValue(ENABLED)))
+                    {
+                        TimeSpan timeSinceLastSet = DateTime.UtcNow - _lastColorSetTimestamp;
+                        // NES games run up to 60 FPS, so there's no point in updating the colors more often than that.
+                        if (timeSinceLastSet.TotalSeconds < (1.0 / 60.0)) return;
+
+                        Msg("Setting random colors for initialized canvas " + _latestCanvasInstance.Slot.Name);
+
+                        try
+                        {
+                            SetRandomColors(_latestCanvasInstance);
+                        }
+                        catch (Exception e)
+                        {
+                            Error("Failed to set random colors for initialized canvas " + _latestCanvasInstance.Slot.Name);
+                            Error(e.ToString());
+                            initialized = false;
+                            Error("Set initialized to false.");
+                            return;
+                        }
+
+                        _lastColorSetTimestamp = DateTime.UtcNow;
+                        Msg("Set random colors for initialized canvas " + _latestCanvasInstance.Slot.Name);
+                        return;
+                    }
+
+                }
+            }
+
+            /*
+            [HarmonyPatch(typeof(FrooxEngine.Userspace), "OnCommonUpdate")]
+            public static class UserspaceOnCommonUpdatePatcher
+            {
+                public static void Postfix()
+                {
+                    Msg("UserspaceOnCommonUpdatePatcher.Postfix() called");
+                }
+            }
+            */
+
+
         }
     }
 }
