@@ -15,6 +15,7 @@ namespace ResoniteNESApp
     {
         private Timer _timer;
         private Random _random;
+
         public Form1()
         {
             InitializeComponent();
@@ -31,23 +32,47 @@ namespace ResoniteNESApp
 
         private void Timer_Tick(object sender, EventArgs e)
         {
-            pictureBox1.Image = GenerateRandomImage(25, 25); 
+            if (!checkBox1.Checked) return;
+
+            // Generate pixel data
+            var pixelData = GenerateRandomPixelData(25, 25);
+
+            // Convert pixel data to Bitmap and set to PictureBox
+            pictureBox1.Image = ConvertPixelDataToBitmap(pixelData, 25, 25);
         }
 
-        private Bitmap GenerateRandomImage(int width, int height)
-        { 
-            Bitmap bmp = new Bitmap(width, height);
+        // Generate random pixel data in the specified format
+        private List<int> GenerateRandomPixelData(int width, int height)
+        {
+            var pixelData = new List<int>();
             for (int x = 0; x < width; x++)
-            { 
+            {
                 for (int y = 0; y < height; y++)
                 {
-                    Color randomColor = Color.FromArgb(
-                        _random.Next(256), // R
-                        _random.Next(256), // G
-                        _random.Next(256) // B
-                        );
-                    bmp.SetPixel(x, y, randomColor);
+                    pixelData.Add(x); // row index
+                    pixelData.Add(y); // column index
+                    pixelData.Add(_random.Next(256)); // R
+                    pixelData.Add(_random.Next(256)); // G
+                    pixelData.Add(_random.Next(256)); // B
                 }
+            }
+            return pixelData;
+        }
+
+        // Convert pixel data into a Bitmap
+        private Bitmap ConvertPixelDataToBitmap(List<int> pixelData, int width, int height)
+        {
+            Bitmap bmp = new Bitmap(width, height);
+            for (int i = 0; i < pixelData.Count; i += 5)
+            {
+                int x = pixelData[i];
+                int y = pixelData[i + 1];
+                Color pixelColor = Color.FromArgb(
+                    pixelData[i + 2], // R
+                    pixelData[i + 3], // G
+                    pixelData[i + 4]  // B
+                );
+                bmp.SetPixel(x, y, pixelColor);
             }
             return bmp;
         }
