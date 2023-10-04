@@ -139,7 +139,7 @@ namespace ResoniteNESApp
                 {
                     Color pixel = bmp.GetPixel(x, y);
                     Color currentPixel = _currentBitmap.GetPixel(x, y);
-                    if (forceFullFrame || !AreColorsEqual(pixel, currentPixel))
+                    if (forceFullFrame || !(currentPixel.R == pixel.R && currentPixel.G == pixel.G && currentPixel.B == pixel.B))
                     {
                         pixelData.Add(x); // row index
                         pixelData.Add(y); // column index
@@ -154,11 +154,6 @@ namespace ResoniteNESApp
             return pixelData;
         }
 
-
-        private bool AreColorsEqual(Color c1, Color c2)
-        {
-            return c1.R == c2.R && c1.G == c2.G && c1.B == c2.B;
-        }
 
         // Convert pixel data into a Bitmap
         private Bitmap SetPixelDataToBitmap(List<int> pixelData, int width, int height)
