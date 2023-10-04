@@ -83,25 +83,31 @@ namespace ResoniteNESApp
 
         private Bitmap CaptureFCEUXWindow()
         {
-            //IntPtr hWnd = NativeMethods.FindWindow(null, "Mesen - mario");
             IntPtr hWnd = NativeMethods.FindWindow(null, "FCEUX 2.1.4a: mario");
-
 
             if (hWnd == IntPtr.Zero)
             {
                 return null;
             }
-            Console.WriteLine("Found window FCEUX!");
-
 
             NativeMethods.RECT rect;
             NativeMethods.GetWindowRect(hWnd, out rect);
-            int width = rect.Right - rect.Left;
-            int height = rect.Bottom - rect.Top;
 
-            Bitmap bmp = new Bitmap(width, height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            // Adjusting for the title bar and borders - these values are just placeholders
+            int titleBarHeight = 30;
+            int borderWidth = 8;
+
+            int adjustedTop = rect.Top + titleBarHeight;
+            int adjustedLeft = rect.Left + borderWidth;
+            int adjustedRight = rect.Right - borderWidth;
+            int adjustedBottom = rect.Bottom;
+
+            int width = adjustedRight - adjustedLeft;
+            int height = adjustedBottom - adjustedTop;
+
+            Bitmap bmp = new Bitmap(FRAME_WIDTH, FRAME_HEIGHT, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
             Graphics g = Graphics.FromImage(bmp);
-            g.CopyFromScreen(rect.Left, rect.Top, 0, 0, new Size(width, height), CopyPixelOperation.SourceCopy);
+            g.CopyFromScreen(adjustedLeft, adjustedTop, 0, 0, new Size(width, height), CopyPixelOperation.SourceCopy);
             return bmp;
         }
 
@@ -111,7 +117,7 @@ namespace ResoniteNESApp
             Bitmap bmp = CaptureFCEUXWindow();
             if (bmp == null)
             {
-                Console.WriteLine("FCEUX window not found");
+                Console.WriteLine("emulator window not found");
                 return null;
             }
 
@@ -130,27 +136,6 @@ namespace ResoniteNESApp
             }
 
             bmp.Dispose();
-            return pixelData;
-        }
-
-
-        // Generate random pixel data in the specified format:
-        // [row index, column index, r value, g value, b value,
-        //  row index, column index, r value, g value, b value, ...]
-        private List<int> GenerateRandomPixelData(int width, int height)
-        {
-            var pixelData = new List<int>();
-            for (int x = 0; x < width; x++)
-            {
-                for (int y = 0; y < height; y++)
-                {
-                    pixelData.Add(x); // row index
-                    pixelData.Add(y); // column index
-                    pixelData.Add(_random.Next(256)); // R
-                    pixelData.Add(_random.Next(256)); // G
-                    pixelData.Add(_random.Next(256)); // B
-                }
-            }
             return pixelData;
         }
 
