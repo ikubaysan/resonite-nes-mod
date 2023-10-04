@@ -41,7 +41,9 @@ namespace ResoniteNESApp
             pictureBox1.Image = ConvertPixelDataToBitmap(pixelData, 25, 25);
         }
 
-        // Generate random pixel data in the specified format
+        // Generate random pixel data in the specified format:
+        // [row index, column index, r value, g value, b value,
+        //  row index, column index, r value, g value, b value, ...]
         private List<int> GenerateRandomPixelData(int width, int height)
         {
             var pixelData = new List<int>();
