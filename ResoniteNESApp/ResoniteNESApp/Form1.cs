@@ -183,10 +183,7 @@ namespace ResoniteNESApp
                 Console.WriteLine("Error writing to MemoryMappedFile: " + ex.Message);
                 return;
             }
-            //Console.WriteLine("Successfully wrote to MemoryMappedFile");
         }
-
-
 
         private List<int> ReadFromMemoryMappedFile()
         {
@@ -215,8 +212,5 @@ namespace ResoniteNESApp
             }
             return pixelData;
         }
-
-
-
     }
 }
