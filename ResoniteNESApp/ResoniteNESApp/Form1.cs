@@ -18,6 +18,7 @@ namespace ResoniteNESApp
         private Random _random;
         private const string MemoryMappedFileName = "ResonitePixelData";
         private const int MemoryMappedFileSize = 25 * 25 * 5 * sizeof(int); // Assuming a maximum of 25x25 image and 5 ints per pixel
+        private MemoryMappedFile _memoryMappedFile;
 
         public Form1()
         {
@@ -75,7 +76,9 @@ namespace ResoniteNESApp
         private Bitmap ConvertPixelDataToBitmap(List<int> pixelData, int width, int height)
         {
             Bitmap bmp = new Bitmap(width, height);
-            for (int i = 0; i < pixelData.Count; i += 5)
+            // Because we're incrementing by 5, it's possible that we end up setting i to the last value of the list.
+            // But anything beyond that would bring us out of bounds, so we use -1 to prevent this case.
+            for (int i = 0; i < pixelData.Count - 1; i += 5)
             {
                 int x = pixelData[i];
                 int y = pixelData[i + 1];
@@ -94,43 +97,28 @@ namespace ResoniteNESApp
         {
             try
             {
-                using (MemoryMappedFile mmf = MemoryMappedFile.CreateOrOpen(MemoryMappedFileName, MemoryMappedFileSize))
-                using (MemoryMappedViewStream stream = mmf.CreateViewStream())
+                if (_memoryMappedFile == null)
+                {
+                    _memoryMappedFile = MemoryMappedFile.CreateOrOpen(MemoryMappedFileName, MemoryMappedFileSize);
+                }
+
+                using (MemoryMappedViewStream stream = _memoryMappedFile.CreateViewStream())
                 using (BinaryWriter writer = new BinaryWriter(stream))
                 {
                     foreach (int value in pixelData)
                     {
                         writer.Write(value);
                     }
-
-                    // Write validation
-                    stream.Seek(0, SeekOrigin.Begin);  // Reset the stream position to the beginning
-
-                    using (BinaryReader reader = new BinaryReader(stream))
-                    {
-                        for (int i = 0; i < pixelData.Count; i++)
-                        {
-                            int value = reader.ReadInt32();
-                            if (value != pixelData[i])
-                            {
-                                Console.WriteLine($"Mismatch at position {i}. Expected: {pixelData[i]}, Found: {value}");
-                            }
-                            else
-                            {
-                                //Console.WriteLine("Matched!!");
-                            }
-                        }
-                    }
                 }
             }
             catch (Exception ex)
             {
-                // Handle the exception, maybe log it or show a message to the user
                 Console.WriteLine("Error writing to MemoryMappedFile: " + ex.Message);
                 return;
             }
-            Console.WriteLine("Successuflly wrote to MemoryMappedFile");
+            //Console.WriteLine("Successfully wrote to MemoryMappedFile");
         }
+
 
 
         private List<int> ReadFromMemoryMappedFile()
@@ -138,33 +126,29 @@ namespace ResoniteNESApp
             var pixelData = new List<int>();
             try
             {
-                using (MemoryMappedFile mmf = MemoryMappedFile.OpenExisting(MemoryMappedFileName))
+                if (_memoryMappedFile != null)
                 {
-                    Console.WriteLine("Successfully opened MMF for reading.");
-                    using (MemoryMappedViewStream stream = mmf.CreateViewStream())
+                    using (MemoryMappedViewStream stream = _memoryMappedFile.CreateViewStream())
+                    using (BinaryReader reader = new BinaryReader(stream))
                     {
-                        using (BinaryReader reader = new BinaryReader(stream))
+                        while (stream.Position < stream.Length)
                         {
-                            while (stream.Position < stream.Length)
-                            {
-                                pixelData.Add(reader.ReadInt32());
-                            }
+                            pixelData.Add(reader.ReadInt32());
                         }
                     }
                 }
-            }
-            catch (FileNotFoundException)
-            {
-                // MemoryMappedFile has not been created yet. Log or handle this scenario as needed.
-                Console.WriteLine("MemoryMappedFile does not exist yet.");
+                else
+                {
+                    Console.WriteLine("MemoryMappedFile has not been created yet.");
+                }
             }
             catch (Exception ex)
             {
-                // Handle other exceptions that might occur
                 Console.WriteLine("Error reading from MemoryMappedFile: " + ex.Message);
             }
             return pixelData;
         }
+
 
 
     }
