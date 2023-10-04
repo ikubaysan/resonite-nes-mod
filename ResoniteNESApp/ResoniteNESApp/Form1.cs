@@ -9,9 +9,30 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.IO.MemoryMappedFiles;
 using System.IO;
+using System.Runtime.InteropServices;
+
 
 namespace ResoniteNESApp
 {
+
+    public static class NativeMethods
+    {
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
+
+        [DllImport("user32.dll")]
+        public static extern bool GetWindowRect(IntPtr hwnd, out RECT lpRect);
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct RECT
+        {
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
+        }
+    }
+
     public partial class Form1 : Form
     {
         private Timer _timer;
@@ -46,7 +67,8 @@ namespace ResoniteNESApp
             if (!checkBox1.Checked) return;
 
             // Generate pixel data
-            var pixelData = GenerateRandomPixelData(FRAME_WIDTH, FRAME_HEIGHT);
+            var pixelData = GeneratePixelDataFromFCEUX(FRAME_WIDTH, FRAME_HEIGHT);
+            if (pixelData == null) return;
 
             // Write to MemoryMappedFile
             WriteToMemoryMappedFile(pixelData);
@@ -57,6 +79,54 @@ namespace ResoniteNESApp
             // Convert pixel data to Bitmap and set to PictureBox
             pictureBox1.Image = ConvertPixelDataToBitmap(readPixelData, FRAME_WIDTH, FRAME_HEIGHT);
         }
+
+
+        private Bitmap CaptureFCEUXWindow()
+        {
+            IntPtr hWnd = NativeMethods.FindWindow(null, "FCEUX"); // Assumes the window title is "FCEUX". Adjust as needed.
+
+            if (hWnd == IntPtr.Zero)
+                return null;
+
+            NativeMethods.RECT rect;
+            NativeMethods.GetWindowRect(hWnd, out rect);
+            int width = rect.Right - rect.Left;
+            int height = rect.Bottom - rect.Top;
+
+            Bitmap bmp = new Bitmap(width, height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            Graphics g = Graphics.FromImage(bmp);
+            g.CopyFromScreen(rect.Left, rect.Top, 0, 0, new Size(width, height), CopyPixelOperation.SourceCopy);
+            return bmp;
+        }
+
+
+        private List<int> GeneratePixelDataFromFCEUX(int width, int height)
+        {
+            Bitmap bmp = CaptureFCEUXWindow();
+            if (bmp == null)
+            {
+                Console.WriteLine("FCEUX window not found");
+                return null;
+            }
+
+            var pixelData = new List<int>();
+            for (int x = 0; x < width; x++)
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    Color pixel = bmp.GetPixel(x, y);
+                    pixelData.Add(x); // row index
+                    pixelData.Add(y); // column index
+                    pixelData.Add(pixel.R);
+                    pixelData.Add(pixel.G);
+                    pixelData.Add(pixel.B);
+                }
+            }
+
+            bmp.Dispose();
+            return pixelData;
+        }
+
 
         // Generate random pixel data in the specified format:
         // [row index, column index, r value, g value, b value,
