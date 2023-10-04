@@ -83,10 +83,16 @@ namespace ResoniteNESApp
 
         private Bitmap CaptureFCEUXWindow()
         {
-            IntPtr hWnd = NativeMethods.FindWindow(null, "FCEUX"); // Assumes the window title is "FCEUX". Adjust as needed.
+            //IntPtr hWnd = NativeMethods.FindWindow(null, "Mesen - mario");
+            IntPtr hWnd = NativeMethods.FindWindow(null, "FCEUX 2.1.4a: mario");
+
 
             if (hWnd == IntPtr.Zero)
+            {
                 return null;
+            }
+            Console.WriteLine("Found window FCEUX!");
+
 
             NativeMethods.RECT rect;
             NativeMethods.GetWindowRect(hWnd, out rect);
