@@ -42,6 +42,7 @@ namespace ResoniteNESApp
         private const int FRAME_HEIGHT = 240;
         private const int MemoryMappedFileSize = FRAME_WIDTH * FRAME_HEIGHT * 5 * sizeof(int);
         private MemoryMappedFile _memoryMappedFile;
+        private Bitmap _currentBitmap = new Bitmap(FRAME_WIDTH, FRAME_HEIGHT);
 
         public Form1()
         {
@@ -142,21 +143,27 @@ namespace ResoniteNESApp
         // Convert pixel data into a Bitmap
         private Bitmap ConvertPixelDataToBitmap(List<int> pixelData, int width, int height)
         {
-            Bitmap bmp = new Bitmap(width, height);
-            // Because we're incrementing by 5, it's possible that we end up setting i to the last value of the list.
-            // But anything beyond that would bring us out of bounds, so we use -1 to prevent this case.
+            int updates = 0;
+            // Use the existing bitmap.
             for (int i = 0; i < pixelData.Count - 1; i += 5)
             {
                 int x = pixelData[i];
                 int y = pixelData[i + 1];
-                Color pixelColor = Color.FromArgb(
+                Color newPixelColor = Color.FromArgb(
                     pixelData[i + 2], // R
                     pixelData[i + 3], // G
                     pixelData[i + 4]  // B
                 );
-                bmp.SetPixel(x, y, pixelColor);
+
+                // Check if the color has changed. If so, update.
+                if (_currentBitmap.GetPixel(x, y) != newPixelColor)
+                {
+                    _currentBitmap.SetPixel(x, y, newPixelColor);
+                    updates++;
+                }
             }
-            return bmp;
+            Console.WriteLine("Updated " + updates + " pixels");
+            return _currentBitmap; // Return the updated bitmap.
         }
 
 
