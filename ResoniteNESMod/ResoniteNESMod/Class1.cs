@@ -52,11 +52,59 @@ namespace ResoniteNESMod
 
         class ReosoniteNESModPatcher
         {
+            private static DateTime _lastColorSetTimestamp = DateTime.MinValue;
+            private static bool initialized = false;
+
             static void Postfix(Canvas __instance)
             {
                 if (!Config.GetValue(ENABLED)) return;
                 if (__instance.Slot.Name != Config.GetValue(CANVAS_SLOT_NAME)) return;
 
+                if (initialized)
+                {
+                    TimeSpan timeSinceLastSet = DateTime.UtcNow - _lastColorSetTimestamp;
+                    //if (timeSinceLastSet.TotalSeconds < (1.0 / 60.0)) return;
+                    if (timeSinceLastSet.TotalSeconds < 1.0) return;
+
+                    Msg("Setting random colors for initialized canvas " + __instance.Slot.Name);
+
+                    try
+                    {
+                        SetRandomColors(__instance);
+                    }
+                    catch (Exception e)
+                    {
+                        Error("Failed to set random colors for initialized canvas " + __instance.Slot.Name);
+                        Error(e.ToString());
+                        initialized = false;
+                        Error("Set initialized to false.");
+                        return;
+                    }
+
+                    _lastColorSetTimestamp = DateTime.UtcNow;
+                    Msg("Set random colors for initialized canvas " + __instance.Slot.Name);
+                    return;
+                }
+                else
+                {
+                    Msg("Canvas must be initialized");
+                    try
+                    { 
+                        InitializeCanvas(__instance);
+                    }
+                    catch (Exception e)
+                    {
+                        Error("Failed to initialize canvas " + __instance.Slot.Name);
+                        Error(e.ToString());
+                        return;
+                    }
+                    initialized = true;
+                }
+                _lastColorSetTimestamp = DateTime.UtcNow;
+            }
+
+            static void InitializeCanvas(Canvas __instance)
+            {
                 // Retrieve the values of configuration keys at the time the method is called
                 int canvasSlotWidth = Config.GetValue(CANVAS_SLOT_WIDTH);
                 int canvasSlotHeight = Config.GetValue(CANVAS_SLOT_HEIGHT);
@@ -65,11 +113,9 @@ namespace ResoniteNESMod
                 // Slot name matches the constant
                 Msg("Matched with the slot name: " + __instance.Slot.Name);
 
-                __instance.Slot.Name = "VeryCoolModded_" + __instance.Slot.Name;
-                
+                //__instance.Slot.Name = "VeryCoolModded_" + __instance.Slot.Name;
 
                 __instance.Slot.GetComponent<Canvas>().Size.Value = new int2(canvasSlotWidth, canvasSlotHeight);
-
 
                 Msg("Changed the slot name to: " + __instance.Slot.Name);
 
@@ -91,7 +137,6 @@ namespace ResoniteNESMod
 
                 Msg("Found the child slot: " + imageSlot.Name);
 
-
                 Slot contentSlot = imageSlot.FindChild("Content");
                 if (contentSlot == null)
                 {
@@ -107,7 +152,6 @@ namespace ResoniteNESMod
                 Msg("Destroyed all children of the content slot: " + contentSlot.Name);
 
                 // Create new HorizontalLayouts according to the height constant
-
                 Random rand = new Random();
 
                 // For the count of the height constant, call contentSlot.AddSlot
@@ -127,14 +171,44 @@ namespace ResoniteNESMod
                         Image imageComponent = verticalSlot.AttachComponent<Image>();
                         // Set the tint to a random color
                         imageComponent.Tint.Value = new colorX(
-                            (float) rand.NextDouble(), 
-                            (float) rand.NextDouble(), 
-                            (float) rand.NextDouble(), 
+                            (float)rand.NextDouble(),
+                            (float)rand.NextDouble(),
+                            (float)rand.NextDouble(),
                             1);
                     }
                 }
 
                 Msg("Created new HorizontalLayouts according to the height constant: " + canvasSlotHeight);
+            }
+
+            static void SetRandomColors(Canvas __instance)
+            {
+                Slot contentSlot = __instance.Slot.FindChild("Background")
+                                                 .FindChild("Image")
+                                                 .FindChild("Content");
+                if (contentSlot == null)
+                { 
+                    Warn("Could not find content slot");
+                }
+                Msg("Found content slot: " + contentSlot.Name);
+
+                Random rand = new Random();
+
+                foreach (Slot horizontalLayoutSlot in contentSlot.Children)
+                {
+                    foreach (Slot verticalSlot in horizontalLayoutSlot.Children)
+                    {
+                        Image imageComponent = verticalSlot.GetComponent<Image>();
+                        if (imageComponent != null)
+                        {
+                            imageComponent.Tint.Value = new colorX(
+                                (float)rand.NextDouble(),
+                                (float)rand.NextDouble(),
+                                (float)rand.NextDouble(),
+                                1);
+                        }
+                    }
+                }
             }
         }
     }
