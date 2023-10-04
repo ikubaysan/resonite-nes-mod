@@ -14,9 +14,10 @@ using System.Runtime.InteropServices;
 
 namespace ResoniteNESApp
 {
-
-    public static class NativeMethods
+    public partial class Form1 : Form
     {
+
+        // Move the P/Invoke methods and structures here
         [DllImport("user32.dll", SetLastError = true)]
         public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
 
@@ -31,17 +32,15 @@ namespace ResoniteNESApp
             public int Right;
             public int Bottom;
         }
-    }
 
-    public partial class Form1 : Form
-    {
+
         private Timer _timer;
         private Random _random;
         private const string MemoryMappedFileName = "ResonitePixelData";
         private const int FRAME_WIDTH = 256;
         private const int FRAME_HEIGHT = 240;
         private const int FPS = 36;
-        private const int MemoryMappedFileSize = FRAME_WIDTH * FRAME_HEIGHT * 5 * sizeof(int);
+        private const int MemoryMappedFileSize = ((FRAME_WIDTH * FRAME_HEIGHT * 5) + 100) * sizeof(int);
         private MemoryMappedFile _memoryMappedFile;
         private Bitmap _currentBitmap = new Bitmap(FRAME_WIDTH, FRAME_HEIGHT);
         private const int FULL_FRAME_INTERVAL = 5000; // 5 seconds in milliseconds
@@ -66,6 +65,7 @@ namespace ResoniteNESApp
             Console.WriteLine("Form loaded");
         }
 
+
         private void Timer_Tick(object sender, EventArgs e)
         {
             if (!checkBox1.Checked) return;
@@ -78,7 +78,7 @@ namespace ResoniteNESApp
             }
 
             // Generate pixel data
-            var pixelData = GeneratePixelDataFromFCEUX(FRAME_WIDTH, FRAME_HEIGHT);
+            var pixelData = GeneratePixelDataFromFCEUX(FRAME_WIDTH, FRAME_HEIGHT, forceFullFrame);
             if (pixelData == null) return;
 
             // Write to MemoryMappedFile
@@ -89,21 +89,21 @@ namespace ResoniteNESApp
             if (readPixelData == null) return;
 
             // Convert pixel data to Bitmap and set to PictureBox
-            pictureBox1.Image = SetPixelDataToBitmap(readPixelData, FRAME_WIDTH, FRAME_HEIGHT, forceFullFrame);
+            pictureBox1.Image = SetPixelDataToBitmap(readPixelData, FRAME_WIDTH, FRAME_HEIGHT);
         }
 
 
         private Bitmap CaptureFCEUXWindow()
         {
-            IntPtr hWnd = NativeMethods.FindWindow(null, "FCEUX 2.1.4a: mario");
+            IntPtr hWnd = FindWindow(null, "FCEUX 2.1.4a: mario");
 
             if (hWnd == IntPtr.Zero)
             {
                 return null;
             }
 
-            NativeMethods.RECT rect;
-            NativeMethods.GetWindowRect(hWnd, out rect);
+            RECT rect;
+            GetWindowRect(hWnd, out rect);
 
             // Adjusting for the title bar and borders - these values are just placeholders
             int titleBarHeight = 30;
@@ -123,7 +123,7 @@ namespace ResoniteNESApp
             return bmp;
         }
 
-        private List<int> GeneratePixelDataFromFCEUX(int width, int height)
+        private List<int> GeneratePixelDataFromFCEUX(int width, int height, bool forceFullFrame)
         {
             Bitmap bmp = CaptureFCEUXWindow();
             if (bmp == null)
@@ -138,11 +138,15 @@ namespace ResoniteNESApp
                 for (int y = 0; y < height; y++)
                 {
                     Color pixel = bmp.GetPixel(x, y);
-                    pixelData.Add(x); // row index
-                    pixelData.Add(y); // column index
-                    pixelData.Add(pixel.R);
-                    pixelData.Add(pixel.G);
-                    pixelData.Add(pixel.B);
+                    Color currentPixel = _currentBitmap.GetPixel(x, y);
+                    if (forceFullFrame || !AreColorsEqual(pixel, currentPixel))
+                    {
+                        pixelData.Add(x); // row index
+                        pixelData.Add(y); // column index
+                        pixelData.Add(pixel.R);
+                        pixelData.Add(pixel.G);
+                        pixelData.Add(pixel.B);
+                    }
                 }
             }
 
@@ -150,11 +154,16 @@ namespace ResoniteNESApp
             return pixelData;
         }
 
+
+        private bool AreColorsEqual(Color c1, Color c2)
+        {
+            return c1.R == c2.R && c1.G == c2.G && c1.B == c2.B;
+        }
+
         // Convert pixel data into a Bitmap
-        private Bitmap SetPixelDataToBitmap(List<int> pixelData, int width, int height, bool forceFullFrame)
+        private Bitmap SetPixelDataToBitmap(List<int> pixelData, int width, int height)
         {
             int updates = 0;
-            // Use the existing bitmap.
             for (int i = 0; i < pixelData.Count - 1; i += 5)
             {
                 int x = pixelData[i];
@@ -164,19 +173,12 @@ namespace ResoniteNESApp
                     pixelData[i + 3], // G
                     pixelData[i + 4]  // B
                 );
-
-                // Check if the color has changed. If so, update.
-                // Or if forceFullFrame is true, update regardless of change.
-                if (forceFullFrame || _currentBitmap.GetPixel(x, y) != newPixelColor)
-                {
-                    _currentBitmap.SetPixel(x, y, newPixelColor);
-                    updates++;
-                }
+                _currentBitmap.SetPixel(x, y, newPixelColor);
+                updates++;
             }
-            Console.WriteLine(updates + " pixels changed since previous frame. forceFullFrame: " + forceFullFrame);
+            Console.WriteLine(updates + " pixels changed since previous frame.");
             return _currentBitmap; // Return the updated bitmap.
         }
-
 
         private void WriteToMemoryMappedFile(List<int> pixelData)
         {
@@ -190,6 +192,10 @@ namespace ResoniteNESApp
                 using (MemoryMappedViewStream stream = _memoryMappedFile.CreateViewStream())
                 using (BinaryWriter writer = new BinaryWriter(stream))
                 {
+                    // Write the count of pixels first.
+                    writer.Write(pixelData.Count / 5);  // Because each pixel has 5 data points.
+
+                    // Then write the pixel data
                     foreach (int value in pixelData)
                     {
                         writer.Write(value);
@@ -206,6 +212,7 @@ namespace ResoniteNESApp
         private List<int> ReadFromMemoryMappedFile()
         {
             var pixelData = new List<int>();
+            int latestIndex = 0;
             try
             {
                 if (_memoryMappedFile != null)
@@ -213,9 +220,16 @@ namespace ResoniteNESApp
                     using (MemoryMappedViewStream stream = _memoryMappedFile.CreateViewStream())
                     using (BinaryReader reader = new BinaryReader(stream))
                     {
-                        while (stream.Position < stream.Length)
+                        // Read the count of pixels that have changed.
+                        int changedPixelsCount = reader.ReadInt32();
+
+                        // Considering each pixel has 5 data points (x, y, r, g, b)
+                        int dataToRead = changedPixelsCount * 5;
+
+                        for (int i = 0; i < dataToRead; i++)
                         {
                             pixelData.Add(reader.ReadInt32());
+                            latestIndex++;
                         }
                     }
                 }
@@ -231,6 +245,12 @@ namespace ResoniteNESApp
                 return null;
             }
             return pixelData;
+        }
+
+        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            // Dispose the MemoryMappedFile
+            _memoryMappedFile?.Dispose();
         }
     }
 }
