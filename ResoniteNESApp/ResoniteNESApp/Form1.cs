@@ -232,7 +232,7 @@ namespace ResoniteNESApp
                         // Read the count of pixels that have changed.
                         int changedPixelsCount = reader.ReadInt32();
 
-                        // Considering each pixel has 5 data points (x, y, packedRGB)
+                        // Considering each pixel has 3 data points (x, y, packedRGB)
                         int dataToRead = changedPixelsCount * 3;
 
                         for (int i = 0; i < dataToRead; i++)
