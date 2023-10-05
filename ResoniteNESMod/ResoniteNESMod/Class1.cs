@@ -185,34 +185,30 @@ namespace ResoniteNESMod
 
 
 
-                int horizontalLayoutSlotCount = contentSlot.Children.Count();
-                Msg("horizontalLayoutSlotCount: " + horizontalLayoutSlotCount);
-
-                Slot firstHorizontalLayoutSlot = contentSlot.Children.ElementAt(0);
-                int verticalSlotCount = firstHorizontalLayoutSlot.Children.Count();
-                Msg("Count of vertical slots in firstHorizontalLayoutSlot: " + verticalSlotCount);
-
-                Slot secondHorizontalLayoutSlot = contentSlot.Children.ElementAt(1);
-                int verticalSlotCount2 = firstHorizontalLayoutSlot.Children.Count();
-                Msg("Count of vertical slots in secondHorizontalLayoutSlot: " + verticalSlotCount2);
-
-
-
                 // Get a list of horizontalLayoutSlots
-
-
-                /*
-
                 int i;
                 for (i = 0; i < pixelData.Count - 1; i += 2) // RGB data of contiguous pixels is represented by 4 ints: (x, y, span, packedRGB)
                 {
-
                     UnpackXYZ(pixelData[i], out int xStart, out int y, out int spanLength);
-                    UnpackXYZ(pixelData[i + 1], out int R, out int G, out int B); // Unpack RGB from the packed value
-                    //Msg(xStart + ", " + y + ", " + spanLength + ", " + R + ", " + G + ", " + B);
-                }
-                */
+                    UnpackXYZ(pixelData[i + 1], out int R, out int G, out int B);
 
+                    for (int x = xStart; x < xStart + spanLength; x++)
+                    {
+                        Slot horizontalSlot = contentSlot.Children.ElementAt(y);
+                        Slot verticalSlot = horizontalSlot.Children.ElementAt(x);
+
+                        Image imageComponent = verticalSlot.GetComponent<Image>();
+                        if (imageComponent == null)
+                        {
+                            Warn("Could not find image component");
+                        }
+                        else
+                        {
+                            imageComponent.Tint.Value = new colorX( (float)R / 1000, (float)G / 1000, (float)B / 1000, 1);
+                        }
+
+                    }
+                }
             }
 
 
