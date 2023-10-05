@@ -194,7 +194,7 @@ namespace ResoniteNESApp
         {
             int i;
             int nPixelsChanged = 0;
-            for (i = 0; i < pixelData.Count - 1; i += 2) // RGB data of contiguous pixels is represented by 4 ints: (x, y, span, packedRGB)
+            for (i = 0; i < pixelData.Count - 1; i += 2) // RGB data of contiguous pixels is represented by 2 ints: (packedXYSpan, packedRGB)
             {
 
                 UnpackXYZ(pixelData[i], out int xStart, out int y, out int spanLength);
@@ -228,7 +228,7 @@ namespace ResoniteNESApp
                     writer.Write(DateTime.UtcNow.Millisecond);
 
                     // Write the count of pixels next.
-                    writer.Write(pixelData.Count / 2); // RGB data of contiguous pixels is represented by 4 ints: (x, y, span, packedRGB)
+                    writer.Write(pixelData.Count / 2); // RGB data of contiguous pixels is represented by 2 ints: (packedXYSpan, packedRGB)
 
                     // Then write the pixel data
                     foreach (int value in pixelData)
@@ -263,7 +263,7 @@ namespace ResoniteNESApp
                     // Read the count of pixels that have changed.
                     int changedPixelsCount = reader.ReadInt32();
 
-                    // RGB data of contiguous pixels is represented by 4 ints: (x, y, span, packedRGB)
+                    // RGB data of contiguous pixels is represented by 2 ints: (packedXYSpan, packedRGB)
                     int dataToRead = changedPixelsCount * 2;
 
                     for (int i = 0; i < dataToRead; i++)
