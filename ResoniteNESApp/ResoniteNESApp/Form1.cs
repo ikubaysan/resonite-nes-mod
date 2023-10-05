@@ -152,6 +152,8 @@ namespace ResoniteNESApp
             }
 
             var pixelData = new List<int>();
+            var rgbToSpans = new Dictionary<int, List<int>>(); // Map RGB values to spans
+
             for (int y = 0; y < height; y++)
             {
                 int x = 0;
@@ -165,17 +167,20 @@ namespace ResoniteNESApp
                         int spanStart = x;
                         int packedRGB = PackXYZ(pixel.R, pixel.G, pixel.B);
 
-                        // Find the contiguous pixels with the same color
                         while (x < width && bmp.GetPixel(x, y).ToArgb() == pixel.ToArgb())
                         {
                             x++;
                         }
                         int spanLength = x - spanStart;
 
-                        // Append data to the list
                         int packedXYZ = PackXYZ(spanStart, y, spanLength);
-                        pixelData.Add(packedXYZ);  // Packed X, Y, and span
-                        pixelData.Add(packedRGB);  // Packed RGB value
+
+                        if (!rgbToSpans.ContainsKey(packedRGB))
+                        {
+                            rgbToSpans[packedRGB] = new List<int>();
+                        }
+
+                        rgbToSpans[packedRGB].Add(packedXYZ);
                     }
                     else
                     {
@@ -184,32 +189,44 @@ namespace ResoniteNESApp
                 }
             }
 
+            // Now, compile the pixel data in the new format
+            foreach (var kvp in rgbToSpans)
+            {
+                pixelData.Add(kvp.Key); // RGB value
+                pixelData.AddRange(kvp.Value); // Spans
+                pixelData.Add(-kvp.Value.Last()); // Negation as delimiter
+            }
+
             bmp.Dispose();
             return pixelData;
         }
 
 
+
         // Convert pixel data into a Bitmap
         private Bitmap SetPixelDataToBitmap(List<int> pixelData, int width, int height)
         {
-            int i;
+            int i = 0;
             int nPixelsChanged = 0;
-            for (i = 0; i < pixelData.Count - 1; i += 2) // RGB data of contiguous pixels is represented by 2 ints: (packedXYSpan, packedRGB)
+            while (i < pixelData.Count)
             {
+                int packedRGB = pixelData[i++];
+                UnpackXYZ(packedRGB, out int R, out int G, out int B); // Unpack RGB
 
-                UnpackXYZ(pixelData[i], out int xStart, out int y, out int spanLength);
-                UnpackXYZ(pixelData[i + 1], out int R, out int G, out int B); // Unpack RGB from the packed value
-
-                for (int x = xStart; x < xStart + spanLength; x++)
+                while (i < pixelData.Count && pixelData[i] >= 0)
                 {
-                    Color newPixelColor = Color.FromArgb(R, G, B);
-                    _currentBitmap.SetPixel(x, y, newPixelColor);
-                    nPixelsChanged++;
+                    UnpackXYZ(pixelData[i++], out int xStart, out int y, out int spanLength);
+                    for (int x = xStart; x < xStart + spanLength; x++)
+                    {
+                        Color newPixelColor = Color.FromArgb(R, G, B);
+                        _currentBitmap.SetPixel(x, y, newPixelColor);
+                        nPixelsChanged++;
+                    }
                 }
+                i++; // Skip the negative delimiter
             }
-
             Console.WriteLine(nPixelsChanged + " pixels changed since previous frame. pixelData len: " + pixelData.Count);
-            return _currentBitmap; // Return the updated bitmap.
+            return _currentBitmap;
         }
 
         private void WriteToMemoryMappedFile(List<int> pixelData)
@@ -224,13 +241,9 @@ namespace ResoniteNESApp
                 using (MemoryMappedViewStream stream = _memoryMappedFile.CreateViewStream())
                 using (BinaryWriter writer = new BinaryWriter(stream))
                 {
-                    // Write the millisecondsOffset (milliseconds since the latest complete second)
                     writer.Write(DateTime.UtcNow.Millisecond);
+                    writer.Write(pixelData.Count); // Now it's simply the amount of integers that are currently relevant
 
-                    // Write the count of pixels next.
-                    writer.Write(pixelData.Count / 2); // RGB data of contiguous pixels is represented by 2 ints: (packedXYSpan, packedRGB)
-
-                    // Then write the pixel data
                     foreach (int value in pixelData)
                     {
                         writer.Write(value);
@@ -245,6 +258,7 @@ namespace ResoniteNESApp
         }
 
 
+
         private List<int> ReadFromMemoryMappedFile()
         {
             var pixelData = new List<int>();
@@ -253,20 +267,12 @@ namespace ResoniteNESApp
                 using (MemoryMappedViewStream stream = _memoryMappedFile.CreateViewStream())
                 using (BinaryReader reader = new BinaryReader(stream))
                 {
-                    // Read the millisecondsOffset.
                     int millisecondsOffset = reader.ReadInt32();
                     if (millisecondsOffset == latestFrameMillisecondsOffset) return null;
-
-                    // Update the latestFrameMillisecondsOffset because it's different, meaning we got a new frame.
                     latestFrameMillisecondsOffset = millisecondsOffset;
 
-                    // Read the count of pixels that have changed.
-                    int changedPixelsCount = reader.ReadInt32();
-
-                    // RGB data of contiguous pixels is represented by 2 ints: (packedXYSpan, packedRGB)
-                    int dataToRead = changedPixelsCount * 2;
-
-                    for (int i = 0; i < dataToRead; i++)
+                    int dataCount = reader.ReadInt32();
+                    for (int i = 0; i < dataCount; i++)
                     {
                         pixelData.Add(reader.ReadInt32());
                     }
@@ -280,6 +286,7 @@ namespace ResoniteNESApp
             }
             return pixelData;
         }
+
 
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
