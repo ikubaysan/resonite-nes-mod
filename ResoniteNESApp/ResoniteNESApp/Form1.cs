@@ -193,6 +193,7 @@ namespace ResoniteNESApp
         private Bitmap SetPixelDataToBitmap(List<int> pixelData, int width, int height)
         {
             int i;
+            int nPixelsChanged = 0;
             for (i = 0; i < pixelData.Count - 1; i += 2) // RGB data of contiguous pixels is represented by 4 ints: (x, y, span, packedRGB)
             {
 
@@ -203,10 +204,11 @@ namespace ResoniteNESApp
                 {
                     Color newPixelColor = Color.FromArgb(R, G, B);
                     _currentBitmap.SetPixel(x, y, newPixelColor);
+                    nPixelsChanged++;
                 }
             }
 
-            Console.WriteLine(i + " pixels changed since previous frame. pixelData len: " + pixelData.Count);
+            Console.WriteLine(nPixelsChanged + " pixels changed since previous frame. pixelData len: " + pixelData.Count);
             return _currentBitmap; // Return the updated bitmap.
         }
 
