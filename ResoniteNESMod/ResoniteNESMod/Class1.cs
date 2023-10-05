@@ -183,7 +183,7 @@ namespace ResoniteNESMod
                 X = (packedXYZ / 1000000) % 1000;
             }
 
-
+            
             static void SetPixelDataToCanvas(Canvas __instance)
             {
                 int i = 0;
@@ -196,6 +196,38 @@ namespace ResoniteNESMod
                     while (i < readPixelDataLength && readPixelData[i] >= 0)
                     {
                         UnpackXYZ(readPixelData[i++], out int xStart, out int y, out int spanLength);
+                        for (int x = xStart; x < xStart + spanLength; x++)
+                        {
+                            imageComponentCache[y][x].Tint.Value = c;
+                        }
+                    }
+                    i++; // Skip the negative delimiter. We've hit a new color.
+                }
+            }
+
+            static void SetPixelDataToCanvasCausingHang(Canvas __instance)
+            {
+                int i = 0;
+                int R, G, B;
+                int xStart, y, spanLength;
+
+                while (i < readPixelDataLength)
+                {
+                    int packedRGB = readPixelData[i++];
+                    // Normally I'd call UnpackXYZ, but I'm trying to avoid the overhead of calling a method
+                    R = packedRGB % 1000;
+                    G = (packedRGB / 1000) % 1000;
+                    B = (packedRGB / 1000000) % 1000;
+                    
+                    colorX c = new colorX((float)R / 1000, (float)G / 1000, (float)B / 1000, 1, ColorProfile.Linear);
+
+                    while (i < readPixelDataLength && readPixelData[i] >= 0)
+                    {
+                        // Normally I'd call UnpackXYZ, but I'm trying to avoid the overhead of calling a method
+                        xStart = readPixelData[i] % 1000;
+                        y = (readPixelData[i] / 1000) % 1000;
+                        spanLength = (readPixelData[i] / 1000000) % 1000;
+
                         for (int x = xStart; x < xStart + spanLength; x++)
                         {
                             imageComponentCache[y][x].Tint.Value = c;
