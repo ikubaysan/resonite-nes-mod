@@ -59,7 +59,7 @@ namespace ResoniteNESMod
             private static int latestFrameMillisecondsOffset;
             private static Image[][] imageComponentCache;
             private static int[] readPixelData;
-            private static int readPixelDataLength;
+            private static int readPixelDataLength = -1;
             private static MemoryMappedViewStream _memoryMappedViewStream;
             private static BinaryReader _binaryReader;
             private static Dictionary<int, colorX> colorCache = new Dictionary<int, colorX>();
@@ -265,10 +265,11 @@ namespace ResoniteNESMod
                 public static void Postfix()
                 {
                     if (!initialized || _latestCanvasInstance == null) return;
-                    
-                    ReadFromMemoryMappedFile();
-                    if (readPixelDataLength == -1 || !Config.GetValue(ENABLED))
+
+
+                    if (readPixelDataLength == -1 && Config.GetValue(ENABLED))
                     {
+                        ReadFromMemoryMappedFile();
                         return;
                     }
 
@@ -282,8 +283,10 @@ namespace ResoniteNESMod
                         Error(e.ToString());
                         initialized = false;
                         Error("Set initialized to false.");
+                        readPixelDataLength = -1;
                         return;
                     }
+                    readPixelDataLength = -1;
                     return;
                 }
             }
