@@ -60,6 +60,8 @@ namespace ResoniteNESMod
             private static Image[][] imageComponentCache;
             private static int[] readPixelData;
             private static int readPixelDataLength;
+            private static MemoryMappedViewStream _memoryMappedViewStream;
+            private static BinaryReader _binaryReader;
 
 
             static void Postfix(Canvas __instance)
@@ -169,6 +171,8 @@ namespace ResoniteNESMod
                 Msg("Created new HorizontalLayouts according to the height constant: " + canvasSlotHeight);
                 readPixelData = new int[Config.GetValue(CANVAS_SLOT_WIDTH) * Config.GetValue(CANVAS_SLOT_HEIGHT)];
                 _memoryMappedFile = MemoryMappedFile.OpenExisting(MemoryMappedFileName);
+                _memoryMappedViewStream = _memoryMappedFile.CreateViewStream();
+                _binaryReader = new BinaryReader(_memoryMappedViewStream);
                 Msg("_memoryMappedFile has been newly initialized with " + MemoryMappedFileName);
             }
 
@@ -205,28 +209,33 @@ namespace ResoniteNESMod
             {
                 try
                 {
-                    using (MemoryMappedViewStream stream = _memoryMappedFile.CreateViewStream())
-                    using (BinaryReader reader = new BinaryReader(stream))
+                    if (_binaryReader == null)
                     {
-                        int millisecondsOffset = reader.ReadInt32();
-                        if (millisecondsOffset == latestFrameMillisecondsOffset)
-                        {
-                            readPixelDataLength = -1;
-                            return;
-                        }
-                        latestFrameMillisecondsOffset = millisecondsOffset;
-
-                        readPixelDataLength = reader.ReadInt32();
-
-                        // Read all pixel data at once
-                        byte[] buffer = reader.ReadBytes(readPixelDataLength * sizeof(int));
-                        Buffer.BlockCopy(buffer, 0, readPixelData, 0, buffer.Length);
+                        Console.WriteLine("Binary reader not initialized");
+                        readPixelDataLength = -1;
+                        return;
                     }
+
+                    int millisecondsOffset = _binaryReader.ReadInt32();
+                    if (millisecondsOffset == latestFrameMillisecondsOffset)
+                    {
+                        readPixelDataLength = -1;
+                        return;
+                    }
+                    latestFrameMillisecondsOffset = millisecondsOffset;
+
+                    readPixelDataLength = _binaryReader.ReadInt32();
+
+                    // Read all pixel data at once
+                    byte[] buffer = _binaryReader.ReadBytes(readPixelDataLength * sizeof(int));
+                    Buffer.BlockCopy(buffer, 0, readPixelData, 0, buffer.Length);
+                    _memoryMappedViewStream.Position = 0;
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine("Error reading from MemoryMappedFile: " + ex.Message);
                     readPixelDataLength = -1;
+                    _memoryMappedViewStream.Position = 0;
                 }
             }
 
