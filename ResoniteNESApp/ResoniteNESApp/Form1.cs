@@ -16,8 +16,6 @@ namespace ResoniteNESApp
 {
     public partial class Form1 : Form
     {
-
-        // Move the P/Invoke methods and structures here
         [DllImport("user32.dll", SetLastError = true)]
         public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
 
@@ -40,7 +38,8 @@ namespace ResoniteNESApp
         private const int FRAME_WIDTH = 256;
         private const int FRAME_HEIGHT = 240;
         private const int FPS = 36;
-        private const int MemoryMappedFileSize = ((FRAME_WIDTH * FRAME_HEIGHT * 5) + 100) * sizeof(int);
+        // Add 1 to account for the count of pixels that have changed, which is always the 1st integer, written before the pixel data.
+        private const int MemoryMappedFileSize = ((FRAME_WIDTH * FRAME_HEIGHT * 2) + 1) * sizeof(int);
         private MemoryMappedFile _memoryMappedFile;
         private Bitmap _currentBitmap = new Bitmap(FRAME_WIDTH, FRAME_HEIGHT);
         private const int FULL_FRAME_INTERVAL = 5000; // 5 seconds in milliseconds

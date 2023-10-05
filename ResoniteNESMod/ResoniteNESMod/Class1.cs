@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading.Tasks;
 using HarmonyLib;
 using ResoniteModLoader;
-using System;
 using System.Reflection;
 using FrooxEngine;
 using FrooxEngine.UIX;
@@ -227,22 +226,38 @@ namespace ResoniteNESMod
                 public static List<int> ReadFromMemoryMappedFile()
                 {
                     var pixelData = new List<int>();
+                    int latestIndex = 0;
                     try
                     {
-                        _memoryMappedFile = MemoryMappedFile.OpenExisting(MemoryMappedFileName);
-                        using (MemoryMappedViewStream stream = _memoryMappedFile.CreateViewStream())
-                        using (BinaryReader reader = new BinaryReader(stream))
+                        if (_memoryMappedFile == null)
+                        { 
+                            _memoryMappedFile = MemoryMappedFile.OpenExisting(MemoryMappedFileName);
+                            Msg("_memoryMappedFile has been newly initialized with " + MemoryMappedFileName);
+                        }
+                        else
                         {
-                            while (stream.Position < stream.Length)
+                            using (MemoryMappedViewStream stream = _memoryMappedFile.CreateViewStream())
+                            using (BinaryReader reader = new BinaryReader(stream))
                             {
-                                pixelData.Add(reader.ReadInt32());
+                                // Read the count of pixels that have changed.
+                                int changedPixelsCount = reader.ReadInt32();
+
+                                // RGB data of contiguous pixels is represented by 4 ints: (x, y, span, packedRGB)
+                                int dataToRead = changedPixelsCount * 2;
+
+                                for (int i = 0; i < dataToRead; i++)
+                                {
+                                    pixelData.Add(reader.ReadInt32());
+                                    latestIndex++;
+                                }
                             }
                         }
                     }
                     catch (Exception ex)
                     {
-                        Error("Error reading from MemoryMappedFile: " + ex.Message);
-                        pixelData = null;
+                        Console.WriteLine("Error reading from MemoryMappedFile: " + ex.Message);
+                        _memoryMappedFile = null;
+                        return null;
                     }
                     return pixelData;
                 }
