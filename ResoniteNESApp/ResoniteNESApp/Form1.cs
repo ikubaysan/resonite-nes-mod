@@ -138,6 +138,13 @@ namespace ResoniteNESApp
             return foundWindowHandle;
         }
 
+        // A helper function to make sure RGB values stay in the 0-255 range
+        private int Clamp(int value, int min, int max)
+        {
+            if (value < min) return min;
+            if (value > max) return max;
+            return value;
+        }
 
         private Bitmap CaptureFCEUXWindow()
         {
@@ -167,6 +174,59 @@ namespace ResoniteNESApp
             Bitmap bmp = new Bitmap(FRAME_WIDTH, FRAME_HEIGHT, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
             Graphics g = Graphics.FromImage(bmp);
             g.CopyFromScreen(adjustedLeft, adjustedTop, 0, 0, new Size(width, height), CopyPixelOperation.SourceCopy);
+
+            // Adjusting brightness of the entire frame
+            // A value of 1 means no change. Values > 1 increase brightness, and values < 1 decrease it.
+            double brightnessFactor;
+            if (!double.TryParse(textBox2.Text, out brightnessFactor) || brightnessFactor < 0 || brightnessFactor > 2.0)
+            {
+                // Handle the error case. For this example, we'll default to 1.0 if invalid or out of expected range
+                brightnessFactor = 1.0;
+            }
+
+            if (brightnessFactor != 1.0)
+            {
+                for (int y = 0; y < bmp.Height; y++)
+                {
+                    for (int x = 0; x < bmp.Width; x++)
+                    {
+                        Color original = bmp.GetPixel(x, y);
+                        int newRed = Clamp((int)(original.R * brightnessFactor), 0, 255);
+                        int newGreen = Clamp((int)(original.G * brightnessFactor), 0, 255);
+                        int newBlue = Clamp((int)(original.B * brightnessFactor), 0, 255);
+
+                        bmp.SetPixel(x, y, Color.FromArgb(newRed, newGreen, newBlue));
+                    }
+                }
+            }
+
+            // Adding scanline effect
+            if (checkBox2.Checked)
+            {
+                double darkenFactor;  // A value between 0 (no change) and 1 (fully black). Adjust as needed.
+                if (!double.TryParse(textBox3.Text, out darkenFactor) || darkenFactor < 0 || darkenFactor > 1.0)
+                {
+                    // Handle the error case. For this example, we'll default to 0.0 if invalid or out of expected range
+                    darkenFactor = 0.0;
+                }
+
+
+                if (darkenFactor > 0.0)
+                {
+                    for (int y = 0; y < bmp.Height; y += 2)
+                    {
+                        for (int x = 0; x < bmp.Width; x++)
+                        {
+                            Color original = bmp.GetPixel(x, y);
+                            int newRed = (int)(original.R * (1 - darkenFactor));
+                            int newGreen = (int)(original.G * (1 - darkenFactor));
+                            int newBlue = (int)(original.B * (1 - darkenFactor));
+
+                            bmp.SetPixel(x, y, Color.FromArgb(newRed, newGreen, newBlue));
+                        }
+                    }
+                }
+            }
             return bmp;
         }
 
