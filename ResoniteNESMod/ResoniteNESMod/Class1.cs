@@ -62,6 +62,7 @@ namespace ResoniteNESMod
             private static int readPixelDataLength;
             private static MemoryMappedViewStream _memoryMappedViewStream;
             private static BinaryReader _binaryReader;
+            private static Dictionary<int, colorX> colorCache = new Dictionary<int, colorX>();
 
 
             static void Postfix(Canvas __instance)
@@ -176,7 +177,7 @@ namespace ResoniteNESMod
                 Msg("_memoryMappedFile has been newly initialized with " + MemoryMappedFileName);
             }
 
-            
+
             static void SetPixelDataToCanvas(Canvas __instance)
             {
                 int i = 0;
@@ -188,11 +189,18 @@ namespace ResoniteNESMod
                 while (i < readPixelDataLength)
                 {
                     packedRGB = readPixelData[i++];
-                    // divide by 1000f to get a float between 0 and 1
-                    R = ((packedRGB / 1000000) % 1000) / 1000f;
-                    G = ((packedRGB / 1000) % 1000) / 1000f;
-                    B = (packedRGB % 1000) / 1000f;
-                    
+
+                    // Check if we already have this RGB value cached
+                    if (!colorCache.TryGetValue(packedRGB, out colorX cachedColor))
+                    {
+                        // If not, create and cache it
+                        R = ((packedRGB / 1000000) % 1000) / 1000f;
+                        G = ((packedRGB / 1000) % 1000) / 1000f;
+                        B = (packedRGB % 1000) / 1000f;
+                        cachedColor = new colorX(R, G, B, 1);
+                        colorCache[packedRGB] = cachedColor;
+                    }
+
                     while (i < readPixelDataLength && readPixelData[i] >= 0)
                     {
                         packedXYZ = readPixelData[i++];
@@ -200,10 +208,9 @@ namespace ResoniteNESMod
                         y = (packedXYZ / 1000) % 1000;
                         spanLength = packedXYZ % 1000;
 
-                        //UnpackXYZ(readPixelData[i++], out int xStart, out int y, out int spanLength);
                         for (x = xStart; x < xStart + spanLength; x++)
                         {
-                            imageComponentCache[y][x].Tint.Value = new colorX(R, G, B, 1);
+                            imageComponentCache[y][x].Tint.Value = cachedColor;
                         }
                     }
                     i++; // Skip the negative delimiter. We've hit a new color.
