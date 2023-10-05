@@ -186,18 +186,14 @@ namespace ResoniteNESMod
                 {
                     Warn("Could not find content slot");
                 }
-                //Msg("Found content slot: " + contentSlot.Name);
 
-                Msg("pixelData length: " + pixelData.Count);
-
-
-
-                // Get a list of horizontalLayoutSlots
                 int i;
                 for (i = 0; i < pixelData.Count - 1; i += 2)
                 {
                     UnpackXYZ(pixelData[i], out int xStart, out int y, out int spanLength);
                     UnpackXYZ(pixelData[i + 1], out int R, out int G, out int B);
+
+                    colorX c = new colorX((float)R / 1000, (float)G / 1000, (float)B / 1000, 1);
 
                     for (int x = xStart; x < xStart + spanLength; x++)
                     {
@@ -209,7 +205,7 @@ namespace ResoniteNESMod
                         }
                         else
                         {
-                            imageComponent.Tint.Value = new colorX((float)R / 1000, (float)G / 1000, (float)B / 1000, 1);
+                            imageComponent.Tint.Value = c;
                         }
                     }
                 }
@@ -230,9 +226,6 @@ namespace ResoniteNESMod
                             return;
                         }
 
-
-                        Msg("Updating frame for initialized canvas " + _latestCanvasInstance.Slot.Name);
-
                         try
                         {
                             SetPixelDataToCanvas(_latestCanvasInstance, readPixelData);
@@ -245,7 +238,6 @@ namespace ResoniteNESMod
                             Error("Set initialized to false.");
                             return;
                         }
-                        Msg("Set random colors for initialized canvas " + _latestCanvasInstance.Slot.Name);
                         return;
                     }
                 }

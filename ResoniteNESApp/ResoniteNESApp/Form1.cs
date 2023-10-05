@@ -37,7 +37,7 @@ namespace ResoniteNESApp
         private const string MemoryMappedFileName = "ResonitePixelData";
         private const int FRAME_WIDTH = 256;
         private const int FRAME_HEIGHT = 240;
-        private const int FPS = 10;
+        private const int FPS = 36;
         // Add 1 to account for the count of pixels that have changed, which is always the 1st integer, written before the pixel data.
         private const int MemoryMappedFileSize = ((FRAME_WIDTH * FRAME_HEIGHT * 2) + 1) * sizeof(int);
         private MemoryMappedFile _memoryMappedFile;
