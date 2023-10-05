@@ -57,6 +57,7 @@ namespace ResoniteNESMod
             private static MemoryMappedFile _memoryMappedFile;
             private const string MemoryMappedFileName = "ResonitePixelData";
             private static int latestFrameMillisecondsOffset;
+            private static Slot[][] slotCache;
 
 
             static void Postfix(Canvas __instance)
@@ -133,6 +134,9 @@ namespace ResoniteNESMod
                 // Create new HorizontalLayouts according to the height constant
                 Random rand = new Random();
 
+                // Initialize the cache
+                slotCache = new Slot[canvasSlotHeight][];
+
                 // For the count of the height constant, call contentSlot.AddSlot
                 for (int i = 0; i < canvasSlotHeight; i++)
                 {
@@ -142,10 +146,14 @@ namespace ResoniteNESMod
                     horizontalLayoutComponent.PaddingTop.Value = i;
                     horizontalLayoutComponent.PaddingBottom.Value = canvasSlotHeight - i - 1;
 
+                    // Create new slots for each column in the horizontal layout and add them to the cache
+                    slotCache[i] = new Slot[canvasSlotWidth];
+
                     // Add a slot for each column in the horizontal layout
                     for (int j = 0; j < canvasSlotWidth; j++)
                     {
                         Slot verticalSlot = horizontalLayoutSlot.AddSlot("VerticalSlot" + j);
+                        slotCache[i][j] = verticalSlot;
                         verticalSlot.AttachComponent<RectTransform>();
                         Image imageComponent = verticalSlot.AttachComponent<Image>();
                         // Set the tint to a random color
@@ -186,16 +194,14 @@ namespace ResoniteNESMod
 
                 // Get a list of horizontalLayoutSlots
                 int i;
-                for (i = 0; i < pixelData.Count - 1; i += 2) // RGB data of contiguous pixels is represented by 4 ints: (x, y, span, packedRGB)
+                for (i = 0; i < pixelData.Count - 1; i += 2)
                 {
                     UnpackXYZ(pixelData[i], out int xStart, out int y, out int spanLength);
                     UnpackXYZ(pixelData[i + 1], out int R, out int G, out int B);
 
                     for (int x = xStart; x < xStart + spanLength; x++)
                     {
-                        Slot horizontalSlot = contentSlot.Children.ElementAt(y);
-                        Slot verticalSlot = horizontalSlot.Children.ElementAt(x);
-
+                        Slot verticalSlot = slotCache[y][x];
                         Image imageComponent = verticalSlot.GetComponent<Image>();
                         if (imageComponent == null)
                         {
@@ -203,9 +209,8 @@ namespace ResoniteNESMod
                         }
                         else
                         {
-                            imageComponent.Tint.Value = new colorX( (float)R / 1000, (float)G / 1000, (float)B / 1000, 1);
+                            imageComponent.Tint.Value = new colorX((float)R / 1000, (float)G / 1000, (float)B / 1000, 1);
                         }
-
                     }
                 }
             }
