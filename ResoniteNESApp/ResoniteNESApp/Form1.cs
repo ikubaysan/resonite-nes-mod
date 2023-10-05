@@ -37,7 +37,7 @@ namespace ResoniteNESApp
         private const string MemoryMappedFileName = "ResonitePixelData";
         private const int FRAME_WIDTH = 256;
         private const int FRAME_HEIGHT = 240;
-        private const int FPS = 36;
+        private const int FPS = 24;
         // Add 1 to account for the count of pixels that have changed, which is always the 1st integer, written before the pixel data.
         private const int MemoryMappedFileSize = ((FRAME_WIDTH * FRAME_HEIGHT * 2) + 1) * sizeof(int);
         private MemoryMappedFile _memoryMappedFile;
@@ -130,12 +130,11 @@ namespace ResoniteNESApp
             return 1000000000 + x * 1000000 + y * 1000 + z;
         }
 
-        private (int X, int Y, int Z) UnpackXYZ(int packedXYZ)
+        private void UnpackXYZ(int packedXYZ, out int X, out int Y, out int Z)
         {
-            int z = packedXYZ % 1000;
-            int y = (packedXYZ / 1000) % 1000;
-            int x = (packedXYZ / 1000000) % 1000;
-            return (x, y, z);
+            Z = packedXYZ % 1000;
+            Y = (packedXYZ / 1000) % 1000;
+            X = (packedXYZ / 1000000) % 1000;
         }
 
 
@@ -193,9 +192,9 @@ namespace ResoniteNESApp
             int i;
             for (i = 0; i < pixelData.Count - 1; i += 2) // RGB data of contiguous pixels is represented by 4 ints: (x, y, span, packedRGB)
             {
-                var (xStart, y, spanLength) = UnpackXYZ(pixelData[i]);
-                var (R, G, B) = UnpackXYZ(pixelData[i + 1]); // Unpack RGB from the packed value
 
+                UnpackXYZ(pixelData[i], out int xStart, out int y, out int spanLength);
+                UnpackXYZ(pixelData[i + 1], out int R, out int G, out int B); // Unpack RGB from the packed value
 
                 for (int x = xStart; x < xStart + spanLength; x++)
                 {
@@ -214,7 +213,7 @@ namespace ResoniteNESApp
             {
                 if (_memoryMappedFile == null)
                 {
-                    _memoryMappedFile = MemoryMappedFile.CreateNew(MemoryMappedFileName, MemoryMappedFileSize);
+                    _memoryMappedFile = MemoryMappedFile.CreateOrOpen(MemoryMappedFileName, MemoryMappedFileSize);
                 }
 
                 using (MemoryMappedViewStream stream = _memoryMappedFile.CreateViewStream())

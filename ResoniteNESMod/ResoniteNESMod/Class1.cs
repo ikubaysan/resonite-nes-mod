@@ -161,6 +161,14 @@ namespace ResoniteNESMod
                 Msg("Created new HorizontalLayouts according to the height constant: " + canvasSlotHeight);
             }
 
+            static void UnpackXYZ(int packedXYZ, out int X, out int Y, out int Z)
+            {
+                Z = packedXYZ % 1000;
+                Y = (packedXYZ / 1000) % 1000;
+                X = (packedXYZ / 1000000) % 1000;
+            }
+
+
             static void SetPixelDataToCanvas(Canvas __instance, List<int> pixelData)
             {
                 Slot contentSlot = __instance.Slot.FindChild("Background")
@@ -174,6 +182,37 @@ namespace ResoniteNESMod
                 //Msg("Found content slot: " + contentSlot.Name);
 
                 Msg("pixelData length: " + pixelData.Count);
+
+
+
+                int horizontalLayoutSlotCount = contentSlot.Children.Count();
+                Msg("horizontalLayoutSlotCount: " + horizontalLayoutSlotCount);
+
+                Slot firstHorizontalLayoutSlot = contentSlot.Children.ElementAt(0);
+                int verticalSlotCount = firstHorizontalLayoutSlot.Children.Count();
+                Msg("Count of vertical slots in firstHorizontalLayoutSlot: " + verticalSlotCount);
+
+                Slot secondHorizontalLayoutSlot = contentSlot.Children.ElementAt(1);
+                int verticalSlotCount2 = firstHorizontalLayoutSlot.Children.Count();
+                Msg("Count of vertical slots in secondHorizontalLayoutSlot: " + verticalSlotCount2);
+
+
+
+                // Get a list of horizontalLayoutSlots
+
+
+                /*
+
+                int i;
+                for (i = 0; i < pixelData.Count - 1; i += 2) // RGB data of contiguous pixels is represented by 4 ints: (x, y, span, packedRGB)
+                {
+
+                    UnpackXYZ(pixelData[i], out int xStart, out int y, out int spanLength);
+                    UnpackXYZ(pixelData[i + 1], out int R, out int G, out int B); // Unpack RGB from the packed value
+                    //Msg(xStart + ", " + y + ", " + spanLength + ", " + R + ", " + G + ", " + B);
+                }
+                */
+
             }
 
 
@@ -190,7 +229,7 @@ namespace ResoniteNESMod
                     {
                         TimeSpan timeSinceLastSet = DateTime.UtcNow - _lastColorSetTimestamp;
                         // Check the memory mapped file for new data every 1/36th of a second
-                        if (timeSinceLastSet.TotalSeconds < (1.0 / 36.0)) return;
+                        if (timeSinceLastSet.TotalSeconds < (1.0 / 24.0)) return;
 
                         Msg("Updating frame for initialized canvas " + _latestCanvasInstance.Slot.Name);
 
