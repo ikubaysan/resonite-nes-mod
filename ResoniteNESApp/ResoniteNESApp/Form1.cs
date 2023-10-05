@@ -294,7 +294,6 @@ namespace ResoniteNESApp
         }
 
 
-
         void ReadFromMemoryMappedFile()
         {
             try
@@ -307,20 +306,19 @@ namespace ResoniteNESApp
                     {
                         readPixelDataLength = -1;
                         return;
-                    };
+                    }
                     latestFrameMillisecondsOffset = millisecondsOffset;
 
                     readPixelDataLength = reader.ReadInt32();
-                    for (int i = 0; i < readPixelDataLength; i++)
-                    {
-                        readPixelData[i] = reader.ReadInt32();
-                    }
+
+                    // Read all pixel data at once
+                    byte[] buffer = reader.ReadBytes(readPixelDataLength * sizeof(int));
+                    Buffer.BlockCopy(buffer, 0, readPixelData, 0, buffer.Length);
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine("Error reading from MemoryMappedFile: " + ex.Message);
-                _memoryMappedFile = null;
                 readPixelDataLength = -1;
             }
         }

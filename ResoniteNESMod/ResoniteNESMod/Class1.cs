@@ -58,7 +58,7 @@ namespace ResoniteNESMod
             private const string MemoryMappedFileName = "ResonitePixelData";
             private static int latestFrameMillisecondsOffset;
             private static Image[][] imageComponentCache;
-            private static int[] readPixelData = new int[Config.GetValue(CANVAS_SLOT_WIDTH) * Config.GetValue(CANVAS_SLOT_HEIGHT)];
+            private static int[] readPixelData;
             private static int readPixelDataLength;
 
 
@@ -166,16 +166,10 @@ namespace ResoniteNESMod
                             1);
                     }
                 }
-
                 Msg("Created new HorizontalLayouts according to the height constant: " + canvasSlotHeight);
-
-
-                if (_memoryMappedFile == null)
-                {
-                    _memoryMappedFile = MemoryMappedFile.OpenExisting(MemoryMappedFileName);
-                    Msg("_memoryMappedFile has been newly initialized with " + MemoryMappedFileName);
-                }
-
+                readPixelData = new int[Config.GetValue(CANVAS_SLOT_WIDTH) * Config.GetValue(CANVAS_SLOT_HEIGHT)];
+                _memoryMappedFile = MemoryMappedFile.OpenExisting(MemoryMappedFileName);
+                Msg("_memoryMappedFile has been newly initialized with " + MemoryMappedFileName);
             }
 
             static void UnpackXYZ(int packedXYZ, out int X, out int Y, out int Z)
@@ -207,6 +201,35 @@ namespace ResoniteNESMod
                 }
             }
 
+            public static void ReadFromMemoryMappedFile()
+            {
+                try
+                {
+                    using (MemoryMappedViewStream stream = _memoryMappedFile.CreateViewStream())
+                    using (BinaryReader reader = new BinaryReader(stream))
+                    {
+                        int millisecondsOffset = reader.ReadInt32();
+                        if (millisecondsOffset == latestFrameMillisecondsOffset)
+                        {
+                            readPixelDataLength = -1;
+                            return;
+                        }
+                        latestFrameMillisecondsOffset = millisecondsOffset;
+
+                        readPixelDataLength = reader.ReadInt32();
+
+                        // Read all pixel data at once
+                        byte[] buffer = reader.ReadBytes(readPixelDataLength * sizeof(int));
+                        Buffer.BlockCopy(buffer, 0, readPixelData, 0, buffer.Length);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Error reading from MemoryMappedFile: " + ex.Message);
+                    readPixelDataLength = -1;
+                }
+            }
+
 
             [HarmonyPatch(typeof(FrooxEngine.Animator), "OnCommonUpdate")]
             public static class AnimatorOnCommonUpdatePatcher
@@ -234,35 +257,6 @@ namespace ResoniteNESMod
                         return;
                     }
                     return;
-                }
-
-                public static void ReadFromMemoryMappedFile()
-                {
-                    try
-                    {
-                        using (MemoryMappedViewStream stream = _memoryMappedFile.CreateViewStream())
-                        using (BinaryReader reader = new BinaryReader(stream))
-                        {
-                            int millisecondsOffset = reader.ReadInt32();
-                            if (millisecondsOffset == latestFrameMillisecondsOffset)
-                            {
-                                readPixelDataLength = -1;
-                                return;
-                            }
-                            latestFrameMillisecondsOffset = millisecondsOffset;
-                            readPixelDataLength = reader.ReadInt32();
-                            for (int i = 0; i < readPixelDataLength; i++)
-                            {
-                                readPixelData[i] = reader.ReadInt32();
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine("Error reading from MemoryMappedFile: " + ex.Message);
-                        _memoryMappedFile = null;
-                        readPixelDataLength = -1;
-                    }
                 }
             }
         }
