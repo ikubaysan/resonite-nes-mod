@@ -37,18 +37,20 @@ namespace ResoniteNESApp
         private const string MemoryMappedFileName = "ResonitePixelData";
         private const int FRAME_WIDTH = 256;
         private const int FRAME_HEIGHT = 240;
-        private const int FPS = 24;
+        private const int FPS = 10;
         // Add 1 to account for the count of pixels that have changed, which is always the 1st integer, written before the pixel data.
         private const int MemoryMappedFileSize = ((FRAME_WIDTH * FRAME_HEIGHT * 2) + 1) * sizeof(int);
         private MemoryMappedFile _memoryMappedFile;
         private Bitmap _currentBitmap = new Bitmap(FRAME_WIDTH, FRAME_HEIGHT);
         private const int FULL_FRAME_INTERVAL = 5000; // 5 seconds in milliseconds
         private DateTime _lastFullFrameTime = DateTime.MinValue;
+        private DateTime programStartTime;
 
         public Form1()
         {
             InitializeComponent();
             _random = new Random();
+            programStartTime = DateTime.Now;
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -219,7 +221,10 @@ namespace ResoniteNESApp
                 using (MemoryMappedViewStream stream = _memoryMappedFile.CreateViewStream())
                 using (BinaryWriter writer = new BinaryWriter(stream))
                 {
-                    // Write the count of pixels first.
+                    // Write the millisecondsOffset (milliseconds since the latest complete second)
+                    writer.Write(DateTime.UtcNow.Millisecond);
+
+                    // Write the count of pixels next.
                     writer.Write(pixelData.Count / 2); // RGB data of contiguous pixels is represented by 4 ints: (x, y, span, packedRGB)
 
                     // Then write the pixel data
@@ -236,6 +241,7 @@ namespace ResoniteNESApp
             }
         }
 
+
         private List<int> ReadFromMemoryMappedFile()
         {
             var pixelData = new List<int>();
@@ -247,7 +253,10 @@ namespace ResoniteNESApp
                     using (MemoryMappedViewStream stream = _memoryMappedFile.CreateViewStream())
                     using (BinaryReader reader = new BinaryReader(stream))
                     {
-                        // Read the count of pixels that have changed.
+                        // Read the millisecondsOffset.
+                        int millisecondsOffset = reader.ReadInt32();
+
+                        // Now, read the count of pixels that have changed.
                         int changedPixelsCount = reader.ReadInt32();
 
                         // RGB data of contiguous pixels is represented by 4 ints: (x, y, span, packedRGB)
@@ -273,6 +282,7 @@ namespace ResoniteNESApp
             }
             return pixelData;
         }
+
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {

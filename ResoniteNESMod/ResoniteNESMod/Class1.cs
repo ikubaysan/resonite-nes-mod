@@ -52,11 +52,11 @@ namespace ResoniteNESMod
 
         class ReosoniteNESModPatcher
         {
-            private static DateTime _lastColorSetTimestamp = DateTime.MinValue;
             private static bool initialized = false;
             private static Canvas _latestCanvasInstance;
             private static MemoryMappedFile _memoryMappedFile;
             private const string MemoryMappedFileName = "ResonitePixelData";
+            private static int latestFrameMillisecondsOffset;
 
 
             static void Postfix(Canvas __instance)
@@ -81,7 +81,6 @@ namespace ResoniteNESMod
                     }
                     initialized = true;
                 }
-                _lastColorSetTimestamp = DateTime.UtcNow;
             }
 
             static void InitializeCanvas(Canvas __instance)
@@ -218,24 +217,16 @@ namespace ResoniteNESMod
             {
                 public static void Postfix()
                 {
-                    //Msg("AnimatorOnCommonUpdatePatcher.Postfix() called");
-
-
                     if (initialized && _latestCanvasInstance != null && (Config.GetValue(ENABLED)))
                     {
-                        TimeSpan timeSinceLastSet = DateTime.UtcNow - _lastColorSetTimestamp;
-                        // Check the memory mapped file for new data every 1/36th of a second
-                        if (timeSinceLastSet.TotalSeconds < (1.0 / 24.0)) return;
-
-                        Msg("Updating frame for initialized canvas " + _latestCanvasInstance.Slot.Name);
-
                         var readPixelData = ReadFromMemoryMappedFile();
                         if (readPixelData == null)
                         {
-                            Error("Failed to read from memory mapped file");
                             return;
                         }
 
+
+                        Msg("Updating frame for initialized canvas " + _latestCanvasInstance.Slot.Name);
 
                         try
                         {
@@ -249,14 +240,10 @@ namespace ResoniteNESMod
                             Error("Set initialized to false.");
                             return;
                         }
-
-                        _lastColorSetTimestamp = DateTime.UtcNow;
                         Msg("Set random colors for initialized canvas " + _latestCanvasInstance.Slot.Name);
                         return;
                     }
-
                 }
-
 
                 public static List<int> ReadFromMemoryMappedFile()
                 {
@@ -274,6 +261,17 @@ namespace ResoniteNESMod
                             using (MemoryMappedViewStream stream = _memoryMappedFile.CreateViewStream())
                             using (BinaryReader reader = new BinaryReader(stream))
                             {
+                                // Read the millisecondsOffset.
+                                int millisecondsOffset = reader.ReadInt32();
+
+                                if (millisecondsOffset == latestFrameMillisecondsOffset)
+                                {
+                                    return null;
+                                }
+
+                                // Update the latestFrameMillisecondsOffset because it's different, meaning we got a new frame.
+                                latestFrameMillisecondsOffset = millisecondsOffset;
+
                                 // Read the count of pixels that have changed.
                                 int changedPixelsCount = reader.ReadInt32();
 
