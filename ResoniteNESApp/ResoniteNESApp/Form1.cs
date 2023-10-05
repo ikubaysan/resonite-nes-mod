@@ -125,18 +125,18 @@ namespace ResoniteNESApp
 
 
 
-        private int PackRGB(int r, int g, int b)
+
+        private int PackXYZ(int x, int y, int z)
         {
-            return 1000000000 + r * 1000000 + g * 1000 + b;
+            return 1000000000 + x * 1000000 + y * 1000 + z;
         }
 
-
-        private (int R, int G, int B) UnpackRGB(int packedRGB)
+        private (int X, int Y, int Z) UnpackXYZ(int packedXYZ)
         {
-            int b = packedRGB % 1000;
-            int g = (packedRGB / 1000) % 1000;
-            int r = (packedRGB / 1000000) % 1000;
-            return (r, g, b);
+            int z = packedXYZ % 1000;
+            int y = (packedXYZ / 1000) % 1000;
+            int x = (packedXYZ / 1000000) % 1000;
+            return (x, y, z);
         }
 
 
@@ -162,7 +162,7 @@ namespace ResoniteNESApp
                     if (forceFullFrame || !currentPixel.Equals(pixel))
                     {
                         int spanStart = x;
-                        int packedRGB = PackRGB(pixel.R, pixel.G, pixel.B);
+                        int packedRGB = PackXYZ(pixel.R, pixel.G, pixel.B);
 
                         // Find the contiguous pixels with the same color
                         while (x < width && bmp.GetPixel(x, y).ToArgb() == pixel.ToArgb())
@@ -172,9 +172,8 @@ namespace ResoniteNESApp
                         int spanLength = x - spanStart;
 
                         // Append data to the list
-                        pixelData.Add(spanStart);  // Start X
-                        pixelData.Add(y);          // Y
-                        pixelData.Add(spanLength); // Length of the span
+                        int packedXYZ = PackXYZ(spanStart, y, spanLength);
+                        pixelData.Add(packedXYZ);  // Packed X, Y, and span
                         pixelData.Add(packedRGB);  // Packed RGB value
                     }
                     else
@@ -192,23 +191,21 @@ namespace ResoniteNESApp
         // Convert pixel data into a Bitmap
         private Bitmap SetPixelDataToBitmap(List<int> pixelData, int width, int height)
         {
-            int updates = 0;
-            for (int i = 0; i < pixelData.Count - 1; i += 4) // RGB data of contiguous pixels is represented by 4 ints: (x, y, span, packedRGB)
+            int i;
+            for (i = 0; i < pixelData.Count - 1; i += 2) // RGB data of contiguous pixels is represented by 4 ints: (x, y, span, packedRGB)
             {
-                int xStart = pixelData[i];
-                int y = pixelData[i + 1];
-                int spanLength = pixelData[i + 2];
-                var (R, G, B) = UnpackRGB(pixelData[i + 3]); // Unpack RGB from the packed value
+                var (xStart, y, spanLength) = UnpackXYZ(pixelData[i]);
+                var (R, G, B) = UnpackXYZ(pixelData[i + 1]); // Unpack RGB from the packed value
+
 
                 for (int x = xStart; x < xStart + spanLength; x++)
                 {
                     Color newPixelColor = Color.FromArgb(R, G, B);
                     _currentBitmap.SetPixel(x, y, newPixelColor);
-                    updates++;
                 }
             }
 
-            Console.WriteLine(updates + " pixels changed since previous frame. pixelData len: " + pixelData.Count);
+            Console.WriteLine(i + " pixels changed since previous frame. pixelData len: " + pixelData.Count);
             return _currentBitmap; // Return the updated bitmap.
         }
 
@@ -225,7 +222,7 @@ namespace ResoniteNESApp
                 using (BinaryWriter writer = new BinaryWriter(stream))
                 {
                     // Write the count of pixels first.
-                    writer.Write(pixelData.Count / 4); // RGB data of contiguous pixels is represented by 4 ints: (x, y, span, packedRGB)
+                    writer.Write(pixelData.Count / 2); // RGB data of contiguous pixels is represented by 4 ints: (x, y, span, packedRGB)
 
                     // Then write the pixel data
                     foreach (int value in pixelData)
@@ -256,7 +253,7 @@ namespace ResoniteNESApp
                         int changedPixelsCount = reader.ReadInt32();
 
                         // RGB data of contiguous pixels is represented by 4 ints: (x, y, span, packedRGB)
-                        int dataToRead = changedPixelsCount * 4;
+                        int dataToRead = changedPixelsCount * 2;
 
                         for (int i = 0; i < dataToRead; i++)
                         {
