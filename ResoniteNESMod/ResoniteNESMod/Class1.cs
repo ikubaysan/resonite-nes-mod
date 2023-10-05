@@ -176,29 +176,34 @@ namespace ResoniteNESMod
                 Msg("_memoryMappedFile has been newly initialized with " + MemoryMappedFileName);
             }
 
-            static void UnpackXYZ(int packedXYZ, out int X, out int Y, out int Z)
-            {
-                Z = packedXYZ % 1000;
-                Y = (packedXYZ / 1000) % 1000;
-                X = (packedXYZ / 1000000) % 1000;
-            }
-
             
             static void SetPixelDataToCanvas(Canvas __instance)
             {
                 int i = 0;
+                int packedRGB;
+                float R, G, B;
+                int packedXYZ, xStart, y, spanLength;
+                int x;
+
                 while (i < readPixelDataLength)
                 {
-                    int packedRGB = readPixelData[i++];
-                    UnpackXYZ(packedRGB, out int R, out int G, out int B);
-                    colorX c = new colorX((float)R / 1000, (float)G / 1000, (float)B / 1000, 1, ColorProfile.Linear);
-
+                    packedRGB = readPixelData[i++];
+                    // divide by 1000f to get a float between 0 and 1
+                    R = ((packedRGB / 1000000) % 1000) / 1000f;
+                    G = ((packedRGB / 1000) % 1000) / 1000f;
+                    B = (packedRGB % 1000) / 1000f;
+                    
                     while (i < readPixelDataLength && readPixelData[i] >= 0)
                     {
-                        UnpackXYZ(readPixelData[i++], out int xStart, out int y, out int spanLength);
-                        for (int x = xStart; x < xStart + spanLength; x++)
+                        packedXYZ = readPixelData[i++];
+                        xStart = (packedXYZ / 1000000) % 1000;
+                        y = (packedXYZ / 1000) % 1000;
+                        spanLength = packedXYZ % 1000;
+
+                        //UnpackXYZ(readPixelData[i++], out int xStart, out int y, out int spanLength);
+                        for (x = xStart; x < xStart + spanLength; x++)
                         {
-                            imageComponentCache[y][x].Tint.Value = c;
+                            imageComponentCache[y][x].Tint.Value = new colorX(R, G, B, 1);
                         }
                     }
                     i++; // Skip the negative delimiter. We've hit a new color.
