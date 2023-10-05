@@ -57,12 +57,16 @@ namespace ResoniteNESApp
         private DateTime _lastFullFrameTime = DateTime.MinValue;
         private DateTime programStartTime;
         private int latestFrameMillisecondsOffset;
+        private int[] readPixelData;
+        private int readPixelDataLength;
+        
 
         public Form1()
         {
             InitializeComponent();
             _random = new Random();
             programStartTime = DateTime.Now;
+            int[] readPixelData = new int[FRAME_WIDTH * FRAME_HEIGHT];
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -98,11 +102,11 @@ namespace ResoniteNESApp
             WriteToMemoryMappedFile(pixelData);
 
             // Read from MemoryMappedFile
-            var readPixelData = ReadFromMemoryMappedFile();
+            ReadFromMemoryMappedFile();
             if (readPixelData == null) return;
 
             // Convert pixel data to Bitmap and set to PictureBox
-            pictureBox1.Image = SetPixelDataToBitmap(readPixelData, FRAME_WIDTH, FRAME_HEIGHT);
+            pictureBox1.Image = SetPixelDataToBitmap(FRAME_WIDTH, FRAME_HEIGHT);
         }
 
         private IntPtr FindWindowByTitleSubstring(string titleSubstring)
@@ -237,18 +241,18 @@ namespace ResoniteNESApp
 
 
         // Convert pixel data into a Bitmap
-        private Bitmap SetPixelDataToBitmap(int[] pixelData, int width, int height)
+        private Bitmap SetPixelDataToBitmap(int width, int height)
         {
             int i = 0;
             int nPixelsChanged = 0;
-            while (i < pixelData.Length)
+            while (i < readPixelDataLength)
             {
-                int packedRGB = pixelData[i++];
+                int packedRGB = readPixelData[i++];
                 UnpackXYZ(packedRGB, out int R, out int G, out int B); // Unpack RGB
 
-                while (i < pixelData.Length && pixelData[i] >= 0)
+                while (i < readPixelDataLength && readPixelData[i] >= 0)
                 {
-                    UnpackXYZ(pixelData[i++], out int xStart, out int y, out int spanLength);
+                    UnpackXYZ(readPixelData[i++], out int xStart, out int y, out int spanLength);
                     for (int x = xStart; x < xStart + spanLength; x++)
                     {
                         Color newPixelColor = Color.FromArgb(R, G, B);
@@ -258,7 +262,7 @@ namespace ResoniteNESApp
                 }
                 i++; // Skip the negative delimiter
             }
-            Console.WriteLine(nPixelsChanged + " pixels changed since previous frame. pixelData len: " + pixelData.Length); 
+            Console.WriteLine(nPixelsChanged + " pixels changed since previous frame. pixelData len: " + readPixelDataLength); 
             return _currentBitmap;
         }
 
@@ -292,23 +296,23 @@ namespace ResoniteNESApp
 
 
 
-        private int[] ReadFromMemoryMappedFile()
+        void ReadFromMemoryMappedFile()
         {
-            int[] pixelData;
             try
             {
                 using (MemoryMappedViewStream stream = _memoryMappedFile.CreateViewStream())
                 using (BinaryReader reader = new BinaryReader(stream))
                 {
                     int millisecondsOffset = reader.ReadInt32();
-                    if (millisecondsOffset == latestFrameMillisecondsOffset) return null;
+                    if (millisecondsOffset == latestFrameMillisecondsOffset) return;
                     latestFrameMillisecondsOffset = millisecondsOffset;
 
                     int dataCount = reader.ReadInt32();
-                    pixelData = new int[dataCount];
+                    readPixelData = new int[dataCount];
+                    readPixelDataLength = dataCount;
                     for (int i = 0; i < dataCount; i++)
                     {
-                        pixelData[i] = reader.ReadInt32();
+                        readPixelData[i] = reader.ReadInt32();
                     }
                 }
             }
@@ -316,9 +320,8 @@ namespace ResoniteNESApp
             {
                 Console.WriteLine("Error reading from MemoryMappedFile: " + ex.Message);
                 _memoryMappedFile = null;
-                return null;
+                readPixelData = null;
             }
-            return pixelData;
         }
 
 
