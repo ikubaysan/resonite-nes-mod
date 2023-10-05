@@ -48,7 +48,7 @@ namespace ResoniteNESApp
         private const string MemoryMappedFileName = "ResonitePixelData";
         private const int FRAME_WIDTH = 256;
         private const int FRAME_HEIGHT = 240;
-        private const int FPS = 24;
+        private int FPS = 24;
         // Add 1 to account for the count of pixels that have changed, which is always the 1st integer, written before the pixel data.
         private const int MemoryMappedFileSize = ((FRAME_WIDTH * FRAME_HEIGHT * 2) + 1) * sizeof(int);
         private MemoryMappedFile _memoryMappedFile;
@@ -80,7 +80,7 @@ namespace ResoniteNESApp
             pictureBox1.Width = FRAME_WIDTH;
             pictureBox1.Height = FRAME_HEIGHT;
 
-            Console.WriteLine("Form loaded");
+            Console.WriteLine("Form loaded with Timer Interval: " + _timer.Interval);
         }
 
 
@@ -398,12 +398,20 @@ namespace ResoniteNESApp
             }
         }
 
-
-
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
             // Dispose the MemoryMappedFile
             _memoryMappedFile?.Dispose();
+        }
+
+        private void textBox4_TextChanged(object sender, EventArgs e)
+        {
+            if (int.TryParse(textBox4.Text, out int selectedFPS) && selectedFPS <= 60 && selectedFPS >= 1)
+            {
+                FPS = selectedFPS;
+                _timer.Interval = (int)((1.0 / FPS) * 1000); // Update timer's interval here
+                Console.WriteLine("FPS changed to " + FPS + " and Timer Interval set to " + _timer.Interval);
+            }
         }
     }
 }

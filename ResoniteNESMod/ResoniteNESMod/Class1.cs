@@ -184,14 +184,15 @@ namespace ResoniteNESMod
                 int packedRGB;
                 float R, G, B;
                 int packedXYZ, xStart, y, spanLength;
-                int x;
+                int x, xEnd;
+                colorX cachedColor;
 
                 while (i < readPixelDataLength)
                 {
                     packedRGB = readPixelData[i++];
 
                     // Check if we already have this RGB value cached
-                    if (!colorCache.TryGetValue(packedRGB, out colorX cachedColor))
+                    if (!colorCache.TryGetValue(packedRGB, out cachedColor))
                     {
                         // If not, create and cache it
                         R = ((packedRGB / 1000000) % 1000) / 1000f;
@@ -207,9 +208,11 @@ namespace ResoniteNESMod
                         packedXYZ = readPixelData[i++];
                         xStart = (packedXYZ / 1000000) % 1000;
                         y = (packedXYZ / 1000) % 1000;
-                        spanLength = packedXYZ % 1000;
 
-                        for (x = xStart; x < xStart + spanLength; x++)
+                        //Same as: xEnd = xStart + spanLength;
+                        xEnd = ((packedXYZ / 1000000) % 1000) + (packedXYZ % 1000);
+
+                        for (x = xStart; x < xEnd; x++)
                         {
                             imageComponentCache[y][x].Tint.Value = cachedColor;
                         }
