@@ -57,7 +57,7 @@ namespace ResoniteNESMod
             private static MemoryMappedFile _memoryMappedFile;
             private const string MemoryMappedFileName = "ResonitePixelData";
             private static int latestFrameMillisecondsOffset;
-            private static Slot[][] slotCache;
+            private static Image[][] imageComponentCache;
 
 
             static void Postfix(Canvas __instance)
@@ -135,7 +135,7 @@ namespace ResoniteNESMod
                 Random rand = new Random();
 
                 // Initialize the cache
-                slotCache = new Slot[canvasSlotHeight][];
+                imageComponentCache = new Image[canvasSlotHeight][];
 
                 // For the count of the height constant, call contentSlot.AddSlot
                 for (int i = 0; i < canvasSlotHeight; i++)
@@ -147,15 +147,15 @@ namespace ResoniteNESMod
                     horizontalLayoutComponent.PaddingBottom.Value = canvasSlotHeight - i - 1;
 
                     // Create new slots for each column in the horizontal layout and add them to the cache
-                    slotCache[i] = new Slot[canvasSlotWidth];
+                    imageComponentCache[i] = new Image[canvasSlotWidth];
 
                     // Add a slot for each column in the horizontal layout
                     for (int j = 0; j < canvasSlotWidth; j++)
                     {
                         Slot verticalSlot = horizontalLayoutSlot.AddSlot("VerticalSlot" + j);
-                        slotCache[i][j] = verticalSlot;
                         verticalSlot.AttachComponent<RectTransform>();
                         Image imageComponent = verticalSlot.AttachComponent<Image>();
+                        imageComponentCache[i][j] = imageComponent;
                         // Set the tint to a random color
                         imageComponent.Tint.Value = new colorX(
                             (float)rand.NextDouble(),
@@ -193,12 +193,11 @@ namespace ResoniteNESMod
                     UnpackXYZ(pixelData[i], out int xStart, out int y, out int spanLength);
                     UnpackXYZ(pixelData[i + 1], out int R, out int G, out int B);
 
-                    colorX c = new colorX((float)R / 1000, (float)G / 1000, (float)B / 1000, 1);
+                    colorX c = new colorX((float)R / 1000, (float)G / 1000, (float)B / 1000, 1, ColorProfile.Linear);
 
                     for (int x = xStart; x < xStart + spanLength; x++)
                     {
-                        Slot verticalSlot = slotCache[y][x];
-                        Image imageComponent = verticalSlot.GetComponent<Image>();
+                        Image imageComponent = imageComponentCache[y][x];
                         if (imageComponent == null)
                         {
                             Warn("Could not find image component");
