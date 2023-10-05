@@ -199,7 +199,7 @@ namespace ResoniteNESMod
                         G = ((packedRGB / 1000) % 1000) / 1000f;
                         B = (packedRGB % 1000) / 1000f;
                         //cachedColor = new colorX(R + 0.01f, G + 0.01f, B + 0.01f, 1);
-                        cachedColor = new colorX(R + 0.01f, G + 0.01f, B + 0.01f, 1, ColorProfile.Linear);
+                        cachedColor = new colorX(R, G, B, 1, ColorProfile.Linear);
                         colorCache[packedRGB] = cachedColor;
                     }
 
