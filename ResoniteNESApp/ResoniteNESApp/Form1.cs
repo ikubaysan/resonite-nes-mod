@@ -22,6 +22,17 @@ namespace ResoniteNESApp
         [DllImport("user32.dll")]
         public static extern bool GetWindowRect(IntPtr hwnd, out RECT lpRect);
 
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        public static extern int GetWindowTextLength(IntPtr hWnd);
+
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        public static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+
+        public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
         [StructLayout(LayoutKind.Sequential)]
         public struct RECT
         {
@@ -94,15 +105,48 @@ namespace ResoniteNESApp
             pictureBox1.Image = SetPixelDataToBitmap(readPixelData, FRAME_WIDTH, FRAME_HEIGHT);
         }
 
+        private IntPtr FindWindowByTitleSubstring(string titleSubstring)
+        {
+            IntPtr foundWindowHandle = IntPtr.Zero;
+            EnumWindows((hWnd, lParam) => {
+                int len = GetWindowTextLength(hWnd);
+                if (len > 0)
+                {
+                    StringBuilder windowTitle = new StringBuilder(len + 1);
+                    GetWindowText(hWnd, windowTitle, len + 1);
+                    if (windowTitle.ToString().Contains(titleSubstring))
+                    {
+                        foundWindowHandle = hWnd;
+                        return false; // Stop the enumeration
+                    }
+                }
+                return true; // Continue the enumeration
+            }, IntPtr.Zero);
+
+            return foundWindowHandle;
+        }
+
 
         private Bitmap CaptureFCEUXWindow()
         {
-            IntPtr hWnd = FindWindow(null, "FCEUX 2.1.4a: mario");
+            IntPtr hWnd = FindWindowByTitleSubstring("FCEUX");
 
             if (hWnd == IntPtr.Zero)
             {
+                Console.WriteLine("FCEUX window not found");
                 return null;
             }
+
+
+            /*
+            // Get window title
+            int titleLength = GetWindowTextLength(hWnd);
+            StringBuilder windowTitle = new StringBuilder(titleLength + 1);
+            GetWindowText(hWnd, windowTitle, titleLength + 1);
+            // Print the window title
+            Console.WriteLine($"Matched window title: {windowTitle}");
+            */
+
 
             RECT rect;
             GetWindowRect(hWnd, out rect);
@@ -267,10 +311,12 @@ namespace ResoniteNESApp
                 using (MemoryMappedViewStream stream = _memoryMappedFile.CreateViewStream())
                 using (BinaryReader reader = new BinaryReader(stream))
                 {
+                    // The 1st integer is the millisecondsOffset, which we use to determine if we got a new frame.
                     int millisecondsOffset = reader.ReadInt32();
                     if (millisecondsOffset == latestFrameMillisecondsOffset) return null;
                     latestFrameMillisecondsOffset = millisecondsOffset;
 
+                    // The 2nd integer is the total number of relevant integers.
                     int dataCount = reader.ReadInt32();
                     for (int i = 0; i < dataCount; i++)
                     {
