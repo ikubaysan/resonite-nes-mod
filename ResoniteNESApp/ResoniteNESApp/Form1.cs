@@ -45,6 +45,7 @@ namespace ResoniteNESApp
         private const int FULL_FRAME_INTERVAL = 5000; // 5 seconds in milliseconds
         private DateTime _lastFullFrameTime = DateTime.MinValue;
         private DateTime programStartTime;
+        private int latestFrameMillisecondsOffset;
 
         public Form1()
         {
@@ -245,39 +246,34 @@ namespace ResoniteNESApp
         private List<int> ReadFromMemoryMappedFile()
         {
             var pixelData = new List<int>();
-            int latestIndex = 0;
             try
             {
-                if (_memoryMappedFile != null)
+                using (MemoryMappedViewStream stream = _memoryMappedFile.CreateViewStream())
+                using (BinaryReader reader = new BinaryReader(stream))
                 {
-                    using (MemoryMappedViewStream stream = _memoryMappedFile.CreateViewStream())
-                    using (BinaryReader reader = new BinaryReader(stream))
+                    // Read the millisecondsOffset.
+                    int millisecondsOffset = reader.ReadInt32();
+                    if (millisecondsOffset == latestFrameMillisecondsOffset) return null;
+
+                    // Update the latestFrameMillisecondsOffset because it's different, meaning we got a new frame.
+                    latestFrameMillisecondsOffset = millisecondsOffset;
+
+                    // Read the count of pixels that have changed.
+                    int changedPixelsCount = reader.ReadInt32();
+
+                    // RGB data of contiguous pixels is represented by 4 ints: (x, y, span, packedRGB)
+                    int dataToRead = changedPixelsCount * 2;
+
+                    for (int i = 0; i < dataToRead; i++)
                     {
-                        // Read the millisecondsOffset.
-                        int millisecondsOffset = reader.ReadInt32();
-
-                        // Now, read the count of pixels that have changed.
-                        int changedPixelsCount = reader.ReadInt32();
-
-                        // RGB data of contiguous pixels is represented by 4 ints: (x, y, span, packedRGB)
-                        int dataToRead = changedPixelsCount * 2;
-
-                        for (int i = 0; i < dataToRead; i++)
-                        {
-                            pixelData.Add(reader.ReadInt32());
-                            latestIndex++;
-                        }
+                        pixelData.Add(reader.ReadInt32());
                     }
-                }
-                else
-                {
-                    Console.WriteLine("MemoryMappedFile has not been created yet.");
-                    return null;
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine("Error reading from MemoryMappedFile: " + ex.Message);
+                _memoryMappedFile = null;
                 return null;
             }
             return pixelData;

@@ -166,6 +166,14 @@ namespace ResoniteNESMod
                 }
 
                 Msg("Created new HorizontalLayouts according to the height constant: " + canvasSlotHeight);
+
+
+                if (_memoryMappedFile == null)
+                {
+                    _memoryMappedFile = MemoryMappedFile.OpenExisting(MemoryMappedFileName);
+                    Msg("_memoryMappedFile has been newly initialized with " + MemoryMappedFileName);
+                }
+
             }
 
             static void UnpackXYZ(int packedXYZ, out int X, out int Y, out int Z)
@@ -178,15 +186,6 @@ namespace ResoniteNESMod
 
             static void SetPixelDataToCanvas(Canvas __instance, List<int> pixelData)
             {
-                Slot contentSlot = __instance.Slot.FindChild("Background")
-                                 .FindChild("Image")
-                                 .FindChild("Content");
-
-                if (contentSlot == null)
-                {
-                    Warn("Could not find content slot");
-                }
-
                 int i;
                 for (i = 0; i < pixelData.Count - 1; i += 2)
                 {
@@ -197,15 +196,8 @@ namespace ResoniteNESMod
 
                     for (int x = xStart; x < xStart + spanLength; x++)
                     {
-                        Image imageComponent = imageComponentCache[y][x];
-                        if (imageComponent == null)
-                        {
-                            Warn("Could not find image component");
-                        }
-                        else
-                        {
-                            imageComponent.Tint.Value = c;
-                        }
+                        // For speed, I'm not checking if x and y are within the cache's bounds.
+                        imageComponentCache[y][x].Tint.Value = c;
                     }
                 }
             }
@@ -217,68 +209,53 @@ namespace ResoniteNESMod
             {
                 public static void Postfix()
                 {
-                    if (initialized && _latestCanvasInstance != null && (Config.GetValue(ENABLED)))
+                    if (!initialized || _latestCanvasInstance == null) return;
+                    
+                    var readPixelData = ReadFromMemoryMappedFile();
+                    if (readPixelData == null || !Config.GetValue(ENABLED))
                     {
-                        var readPixelData = ReadFromMemoryMappedFile();
-                        if (readPixelData == null)
-                        {
-                            return;
-                        }
-
-                        try
-                        {
-                            SetPixelDataToCanvas(_latestCanvasInstance, readPixelData);
-                        }
-                        catch (Exception e)
-                        {
-                            Error("Failed to update frame for initialized canvas " + _latestCanvasInstance.Slot.Name);
-                            Error(e.ToString());
-                            initialized = false;
-                            Error("Set initialized to false.");
-                            return;
-                        }
                         return;
                     }
-                }
 
+                    try
+                    {
+                        SetPixelDataToCanvas(_latestCanvasInstance, readPixelData);
+                    }
+                    catch (Exception e)
+                    {
+                        Error("Failed to update frame for initialized canvas " + _latestCanvasInstance.Slot.Name);
+                        Error(e.ToString());
+                        initialized = false;
+                        Error("Set initialized to false.");
+                        return;
+                    }
+                    return;
+                }
+                
                 public static List<int> ReadFromMemoryMappedFile()
                 {
                     var pixelData = new List<int>();
-                    int latestIndex = 0;
                     try
                     {
-                        if (_memoryMappedFile == null)
-                        { 
-                            _memoryMappedFile = MemoryMappedFile.OpenExisting(MemoryMappedFileName);
-                            Msg("_memoryMappedFile has been newly initialized with " + MemoryMappedFileName);
-                        }
-                        else
+                        using (MemoryMappedViewStream stream = _memoryMappedFile.CreateViewStream())
+                        using (BinaryReader reader = new BinaryReader(stream))
                         {
-                            using (MemoryMappedViewStream stream = _memoryMappedFile.CreateViewStream())
-                            using (BinaryReader reader = new BinaryReader(stream))
+                            // Read the millisecondsOffset.
+                            int millisecondsOffset = reader.ReadInt32();
+                            if (millisecondsOffset == latestFrameMillisecondsOffset) return null;
+
+                            // Update the latestFrameMillisecondsOffset because it's different, meaning we got a new frame.
+                            latestFrameMillisecondsOffset = millisecondsOffset;
+
+                            // Read the count of pixels that have changed.
+                            int changedPixelsCount = reader.ReadInt32();
+
+                            // RGB data of contiguous pixels is represented by 4 ints: (x, y, span, packedRGB)
+                            int dataToRead = changedPixelsCount * 2;
+
+                            for (int i = 0; i < dataToRead; i++)
                             {
-                                // Read the millisecondsOffset.
-                                int millisecondsOffset = reader.ReadInt32();
-
-                                if (millisecondsOffset == latestFrameMillisecondsOffset)
-                                {
-                                    return null;
-                                }
-
-                                // Update the latestFrameMillisecondsOffset because it's different, meaning we got a new frame.
-                                latestFrameMillisecondsOffset = millisecondsOffset;
-
-                                // Read the count of pixels that have changed.
-                                int changedPixelsCount = reader.ReadInt32();
-
-                                // RGB data of contiguous pixels is represented by 4 ints: (x, y, span, packedRGB)
-                                int dataToRead = changedPixelsCount * 2;
-
-                                for (int i = 0; i < dataToRead; i++)
-                                {
-                                    pixelData.Add(reader.ReadInt32());
-                                    latestIndex++;
-                                }
+                                pixelData.Add(reader.ReadInt32());
                             }
                         }
                     }
