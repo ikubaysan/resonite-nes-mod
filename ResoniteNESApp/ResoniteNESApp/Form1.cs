@@ -137,17 +137,6 @@ namespace ResoniteNESApp
                 return null;
             }
 
-
-            /*
-            // Get window title
-            int titleLength = GetWindowTextLength(hWnd);
-            StringBuilder windowTitle = new StringBuilder(titleLength + 1);
-            GetWindowText(hWnd, windowTitle, titleLength + 1);
-            // Print the window title
-            Console.WriteLine($"Matched window title: {windowTitle}");
-            */
-
-
             RECT rect;
             GetWindowRect(hWnd, out rect);
 
@@ -186,7 +175,7 @@ namespace ResoniteNESApp
 
 
 
-        private List<int> GeneratePixelDataFromFCEUX(int width, int height, bool forceFullFrame)
+        private int[] GeneratePixelDataFromFCEUX(int width, int height, bool forceFullFrame)
         {
             Bitmap bmp = CaptureFCEUXWindow();
             if (bmp == null)
@@ -195,7 +184,7 @@ namespace ResoniteNESApp
                 return null;
             }
 
-            var pixelData = new List<int>();
+            List<int> pixelDataList = new List<int>();
             var rgbToSpans = new Dictionary<int, List<int>>(); // Map RGB values to spans
 
             for (int y = 0; y < height; y++)
@@ -236,28 +225,28 @@ namespace ResoniteNESApp
             // Now, compile the pixel data in the new format
             foreach (var kvp in rgbToSpans)
             {
-                pixelData.Add(kvp.Key); // RGB value
-                pixelData.AddRange(kvp.Value); // Spans
-                pixelData.Add(-kvp.Value.Last()); // Negation as delimiter
+                pixelDataList.Add(kvp.Key); // RGB value
+                pixelDataList.AddRange(kvp.Value); // Spans
+                pixelDataList.Add(-kvp.Value.Last()); // Negation as delimiter
             }
 
             bmp.Dispose();
-            return pixelData;
+            return pixelDataList.ToArray();
         }
 
 
 
         // Convert pixel data into a Bitmap
-        private Bitmap SetPixelDataToBitmap(List<int> pixelData, int width, int height)
+        private Bitmap SetPixelDataToBitmap(int[] pixelData, int width, int height)
         {
             int i = 0;
             int nPixelsChanged = 0;
-            while (i < pixelData.Count)
+            while (i < pixelData.Length)
             {
                 int packedRGB = pixelData[i++];
                 UnpackXYZ(packedRGB, out int R, out int G, out int B); // Unpack RGB
 
-                while (i < pixelData.Count && pixelData[i] >= 0)
+                while (i < pixelData.Length && pixelData[i] >= 0)
                 {
                     UnpackXYZ(pixelData[i++], out int xStart, out int y, out int spanLength);
                     for (int x = xStart; x < xStart + spanLength; x++)
@@ -269,11 +258,11 @@ namespace ResoniteNESApp
                 }
                 i++; // Skip the negative delimiter
             }
-            Console.WriteLine(nPixelsChanged + " pixels changed since previous frame. pixelData len: " + pixelData.Count);
+            Console.WriteLine(nPixelsChanged + " pixels changed since previous frame. pixelData len: " + pixelData.Length); 
             return _currentBitmap;
         }
 
-        private void WriteToMemoryMappedFile(List<int> pixelData)
+        private void WriteToMemoryMappedFile(int[] pixelData)
         {
             try
             {
@@ -286,7 +275,7 @@ namespace ResoniteNESApp
                 using (BinaryWriter writer = new BinaryWriter(stream))
                 {
                     writer.Write(DateTime.UtcNow.Millisecond);
-                    writer.Write(pixelData.Count); // Now it's simply the amount of integers that are currently relevant
+                    writer.Write(pixelData.Length); // Now it's simply the amount of integers that are currently relevant
 
                     foreach (int value in pixelData)
                     {
@@ -303,24 +292,23 @@ namespace ResoniteNESApp
 
 
 
-        private List<int> ReadFromMemoryMappedFile()
+        private int[] ReadFromMemoryMappedFile()
         {
-            var pixelData = new List<int>();
+            int[] pixelData;
             try
             {
                 using (MemoryMappedViewStream stream = _memoryMappedFile.CreateViewStream())
                 using (BinaryReader reader = new BinaryReader(stream))
                 {
-                    // The 1st integer is the millisecondsOffset, which we use to determine if we got a new frame.
                     int millisecondsOffset = reader.ReadInt32();
                     if (millisecondsOffset == latestFrameMillisecondsOffset) return null;
                     latestFrameMillisecondsOffset = millisecondsOffset;
 
-                    // The 2nd integer is the total number of relevant integers.
                     int dataCount = reader.ReadInt32();
+                    pixelData = new int[dataCount];
                     for (int i = 0; i < dataCount; i++)
                     {
-                        pixelData.Add(reader.ReadInt32());
+                        pixelData[i] = reader.ReadInt32();
                     }
                 }
             }

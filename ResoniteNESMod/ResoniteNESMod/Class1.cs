@@ -202,16 +202,16 @@ namespace ResoniteNESMod
                 }
             }
 
-            static void SetPixelDataToCanvas(Canvas __instance, List<int> pixelData)
+            static void SetPixelDataToCanvas(Canvas __instance, int[] pixelData)
             {
                 int i = 0;
-                while (i < pixelData.Count)
+                while (i < pixelData.Length)
                 {
                     int packedRGB = pixelData[i++];
                     UnpackXYZ(packedRGB, out int R, out int G, out int B);
                     colorX c = new colorX((float)R / 1000, (float)G / 1000, (float)B / 1000, 1, ColorProfile.Linear);
 
-                    while (i < pixelData.Count && pixelData[i] >= 0)
+                    while (i < pixelData.Length && pixelData[i] >= 0)
                     {
                         UnpackXYZ(pixelData[i++], out int xStart, out int y, out int spanLength);
                         for (int x = xStart; x < xStart + spanLength; x++)
@@ -253,27 +253,24 @@ namespace ResoniteNESMod
                     }
                     return;
                 }
-                
-                public static List<int> ReadFromMemoryMappedFile()
+
+                public static int[] ReadFromMemoryMappedFile()
                 {
-                    var pixelData = new List<int>();
+                    int[] pixelData;
                     try
                     {
                         using (MemoryMappedViewStream stream = _memoryMappedFile.CreateViewStream())
                         using (BinaryReader reader = new BinaryReader(stream))
                         {
-                            // The 1st integer is the millisecondsOffset, which we use to determine if we got a new frame.
                             int millisecondsOffset = reader.ReadInt32();
                             if (millisecondsOffset == latestFrameMillisecondsOffset) return null;
-
-                            // Update the latestFrameMillisecondsOffset because it's different, meaning we got a new frame.
                             latestFrameMillisecondsOffset = millisecondsOffset;
 
-                            // The 2nd integer is the total number of relevant integers.
                             int dataCount = reader.ReadInt32();
+                            pixelData = new int[dataCount];
                             for (int i = 0; i < dataCount; i++)
                             {
-                                pixelData.Add(reader.ReadInt32());
+                                pixelData[i] = reader.ReadInt32();
                             }
                         }
                     }
