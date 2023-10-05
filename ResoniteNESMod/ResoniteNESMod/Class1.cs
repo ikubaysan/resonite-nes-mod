@@ -231,9 +231,19 @@ namespace ResoniteNESMod
 
                     readPixelDataLength = _binaryReader.ReadInt32();
 
+
+                    for (int i = 0; i < readPixelDataLength; i++)
+                    {
+                        readPixelData[i] = _binaryReader.ReadInt32();
+                    }
+
+                    /*
+                     * This was actually slower than the for loop above.
                     // Read all pixel data at once
                     byte[] buffer = _binaryReader.ReadBytes(readPixelDataLength * sizeof(int));
                     Buffer.BlockCopy(buffer, 0, readPixelData, 0, buffer.Length);
+                    */
+
                     _memoryMappedViewStream.Position = 0;
                 }
                 catch (Exception ex)
