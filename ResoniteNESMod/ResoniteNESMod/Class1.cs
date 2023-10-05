@@ -58,6 +58,8 @@ namespace ResoniteNESMod
             private const string MemoryMappedFileName = "ResonitePixelData";
             private static int latestFrameMillisecondsOffset;
             private static Image[][] imageComponentCache;
+            private static int[] readPixelData = new int[Config.GetValue(CANVAS_SLOT_WIDTH) * Config.GetValue(CANVAS_SLOT_HEIGHT)];
+            private static int readPixelDataLength;
 
 
             static void Postfix(Canvas __instance)
@@ -184,36 +186,18 @@ namespace ResoniteNESMod
             }
 
 
-            static void SetPixelDataToCanvasOld(Canvas __instance, List<int> pixelData)
-            {
-                int i;
-                for (i = 0; i < pixelData.Count - 1; i += 2)
-                {
-                    UnpackXYZ(pixelData[i], out int xStart, out int y, out int spanLength);
-                    UnpackXYZ(pixelData[i + 1], out int R, out int G, out int B);
-
-                    colorX c = new colorX((float)R / 1000, (float)G / 1000, (float)B / 1000, 1, ColorProfile.Linear);
-
-                    for (int x = xStart; x < xStart + spanLength; x++)
-                    {
-                        // For speed, I'm not checking if x and y are within the cache's bounds.
-                        imageComponentCache[y][x].Tint.Value = c;
-                    }
-                }
-            }
-
-            static void SetPixelDataToCanvas(Canvas __instance, int[] pixelData)
+            static void SetPixelDataToCanvas(Canvas __instance)
             {
                 int i = 0;
-                while (i < pixelData.Length)
+                while (i < readPixelDataLength)
                 {
-                    int packedRGB = pixelData[i++];
+                    int packedRGB = readPixelData[i++];
                     UnpackXYZ(packedRGB, out int R, out int G, out int B);
                     colorX c = new colorX((float)R / 1000, (float)G / 1000, (float)B / 1000, 1, ColorProfile.Linear);
 
-                    while (i < pixelData.Length && pixelData[i] >= 0)
+                    while (i < readPixelDataLength && readPixelData[i] >= 0)
                     {
-                        UnpackXYZ(pixelData[i++], out int xStart, out int y, out int spanLength);
+                        UnpackXYZ(readPixelData[i++], out int xStart, out int y, out int spanLength);
                         for (int x = xStart; x < xStart + spanLength; x++)
                         {
                             imageComponentCache[y][x].Tint.Value = c;
@@ -224,8 +208,6 @@ namespace ResoniteNESMod
             }
 
 
-
-
             [HarmonyPatch(typeof(FrooxEngine.Animator), "OnCommonUpdate")]
             public static class AnimatorOnCommonUpdatePatcher
             {
@@ -233,15 +215,15 @@ namespace ResoniteNESMod
                 {
                     if (!initialized || _latestCanvasInstance == null) return;
                     
-                    var readPixelData = ReadFromMemoryMappedFile();
-                    if (readPixelData == null || !Config.GetValue(ENABLED))
+                    ReadFromMemoryMappedFile();
+                    if (readPixelDataLength == -1 || !Config.GetValue(ENABLED))
                     {
                         return;
                     }
 
                     try
                     {
-                        SetPixelDataToCanvas(_latestCanvasInstance, readPixelData);
+                        SetPixelDataToCanvas(_latestCanvasInstance);
                     }
                     catch (Exception e)
                     {
@@ -254,23 +236,24 @@ namespace ResoniteNESMod
                     return;
                 }
 
-                public static int[] ReadFromMemoryMappedFile()
+                public static void ReadFromMemoryMappedFile()
                 {
-                    int[] pixelData;
                     try
                     {
                         using (MemoryMappedViewStream stream = _memoryMappedFile.CreateViewStream())
                         using (BinaryReader reader = new BinaryReader(stream))
                         {
                             int millisecondsOffset = reader.ReadInt32();
-                            if (millisecondsOffset == latestFrameMillisecondsOffset) return null;
-                            latestFrameMillisecondsOffset = millisecondsOffset;
-
-                            int dataCount = reader.ReadInt32();
-                            pixelData = new int[dataCount];
-                            for (int i = 0; i < dataCount; i++)
+                            if (millisecondsOffset == latestFrameMillisecondsOffset)
                             {
-                                pixelData[i] = reader.ReadInt32();
+                                readPixelDataLength = -1;
+                                return;
+                            }
+                            latestFrameMillisecondsOffset = millisecondsOffset;
+                            readPixelDataLength = reader.ReadInt32();
+                            for (int i = 0; i < readPixelDataLength; i++)
+                            {
+                                readPixelData[i] = reader.ReadInt32();
                             }
                         }
                     }
@@ -278,9 +261,8 @@ namespace ResoniteNESMod
                     {
                         Console.WriteLine("Error reading from MemoryMappedFile: " + ex.Message);
                         _memoryMappedFile = null;
-                        return null;
+                        readPixelDataLength = -1;
                     }
-                    return pixelData;
                 }
             }
         }

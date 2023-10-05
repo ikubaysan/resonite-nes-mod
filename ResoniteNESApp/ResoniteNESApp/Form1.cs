@@ -57,7 +57,7 @@ namespace ResoniteNESApp
         private DateTime _lastFullFrameTime = DateTime.MinValue;
         private DateTime programStartTime;
         private int latestFrameMillisecondsOffset;
-        private int[] readPixelData;
+        int[] readPixelData = new int[FRAME_WIDTH * FRAME_HEIGHT];
         private int readPixelDataLength;
         
 
@@ -66,7 +66,6 @@ namespace ResoniteNESApp
             InitializeComponent();
             _random = new Random();
             programStartTime = DateTime.Now;
-            int[] readPixelData = new int[FRAME_WIDTH * FRAME_HEIGHT];
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -304,13 +303,15 @@ namespace ResoniteNESApp
                 using (BinaryReader reader = new BinaryReader(stream))
                 {
                     int millisecondsOffset = reader.ReadInt32();
-                    if (millisecondsOffset == latestFrameMillisecondsOffset) return;
+                    if (millisecondsOffset == latestFrameMillisecondsOffset)
+                    {
+                        readPixelDataLength = -1;
+                        return;
+                    };
                     latestFrameMillisecondsOffset = millisecondsOffset;
 
-                    int dataCount = reader.ReadInt32();
-                    readPixelData = new int[dataCount];
-                    readPixelDataLength = dataCount;
-                    for (int i = 0; i < dataCount; i++)
+                    readPixelDataLength = reader.ReadInt32();
+                    for (int i = 0; i < readPixelDataLength; i++)
                     {
                         readPixelData[i] = reader.ReadInt32();
                     }
@@ -320,7 +321,7 @@ namespace ResoniteNESApp
             {
                 Console.WriteLine("Error reading from MemoryMappedFile: " + ex.Message);
                 _memoryMappedFile = null;
-                readPixelData = null;
+                readPixelDataLength = -1;
             }
         }
 
