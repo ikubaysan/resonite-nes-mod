@@ -184,24 +184,47 @@ namespace ResoniteNESMod
             }
 
 
-            static void SetPixelDataToCanvas(Canvas __instance, List<int> pixelData)
+            static void ConvertPixelNumberToXY(int pixelNumber, int width, out int xStart, out int yStart)
             {
-                int i;
-                for (i = 0; i < pixelData.Count - 1; i += 2)
-                {
-                    UnpackXYZ(pixelData[i], out int xStart, out int y, out int spanLength);
-                    UnpackXYZ(pixelData[i + 1], out int R, out int G, out int B);
-
-                    colorX c = new colorX((float)R / 1000, (float)G / 1000, (float)B / 1000, 1, ColorProfile.Linear);
-
-                    for (int x = xStart; x < xStart + spanLength; x++)
-                    {
-                        // For speed, I'm not checking if x and y are within the cache's bounds.
-                        imageComponentCache[y][x].Tint.Value = c;
-                    }
-                }
+                yStart = pixelNumber / width;
+                xStart = pixelNumber % width;
             }
 
+
+            static void SetPixelDataToCanvas(Canvas __instance, List<int> pixelData)
+            {
+                int width = Config.GetValue(CANVAS_SLOT_WIDTH);
+                int i;
+                for (i = 0; i < pixelData.Count - 1; i += 3) // RGB data of contiguous pixels is represented by 3 ints
+                {
+
+                    int pixelNumber = pixelData[i];
+                    int spanLength = pixelData[i + 1];
+                    ConvertPixelNumberToXY(pixelNumber, width, out int xStart, out int yStart);
+                    UnpackXYZ(pixelData[i + 2], out int R, out int G, out int B); // Unpack RGB from the packed value
+
+                    int remainingSpan = spanLength;
+                    int y = yStart;
+
+                    while (remainingSpan > 0)
+                    {
+                        for (int x = xStart; x < width && remainingSpan > 0; x++)
+                        {
+                            colorX c = new colorX((float)R / 1000, (float)G / 1000, (float)B / 1000, 1, ColorProfile.Linear);
+                            imageComponentCache[y][x].Tint.Value = c;
+                            remainingSpan--;
+                        }
+
+                        // If there's still more of the span left, move to the next row
+                        if (remainingSpan > 0)
+                        {
+                            y++;
+                            xStart = 0; // reset the starting x to the beginning of the row
+                        }
+                    }
+                }
+
+            }
 
 
             [HarmonyPatch(typeof(FrooxEngine.Animator), "OnCommonUpdate")]
@@ -250,8 +273,8 @@ namespace ResoniteNESMod
                             // Read the count of pixels that have changed.
                             int changedPixelsCount = reader.ReadInt32();
 
-                            // RGB data of contiguous pixels is represented by 4 ints: (x, y, span, packedRGB)
-                            int dataToRead = changedPixelsCount * 2;
+                            // RGB data of contiguous pixels is represented by 3 ints: (starting pixel, span, packedRGB)
+                            int dataToRead = changedPixelsCount * 3;
 
                             for (int i = 0; i < dataToRead; i++)
                             {

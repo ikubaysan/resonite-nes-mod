@@ -125,7 +125,16 @@ namespace ResoniteNESApp
             return bmp;
         }
 
+        private int ConvertXYToPixelNumber(int x, int y, int width)
+        {
+            return y * width + x;
+        }
 
+        private void ConvertPixelNumberToXY(int pixelNumber, int width, out int xStart, out int yStart)
+        {
+            yStart = pixelNumber / width;
+            xStart = pixelNumber % width;
+        }
 
 
         private int PackXYZ(int x, int y, int z)
@@ -173,8 +182,9 @@ namespace ResoniteNESApp
                         int spanLength = x - spanStart;
 
                         // Append data to the list
-                        int packedXYZ = PackXYZ(spanStart, y, spanLength);
-                        pixelData.Add(packedXYZ);  // Packed X, Y, and span
+                        int pixelNumber = ConvertXYToPixelNumber(spanStart, y, width);
+                        pixelData.Add(pixelNumber);
+                        pixelData.Add(spanLength);  // Directly add spanLength, no need to pack
                         pixelData.Add(packedRGB);  // Packed RGB value
                     }
                     else
@@ -194,17 +204,34 @@ namespace ResoniteNESApp
         {
             int i;
             int nPixelsChanged = 0;
-            for (i = 0; i < pixelData.Count - 1; i += 2) // RGB data of contiguous pixels is represented by 4 ints: (x, y, span, packedRGB)
+            for (i = 0; i < pixelData.Count - 1; i += 3) // RGB data of contiguous pixels is represented by 3 ints
             {
 
-                UnpackXYZ(pixelData[i], out int xStart, out int y, out int spanLength);
-                UnpackXYZ(pixelData[i + 1], out int R, out int G, out int B); // Unpack RGB from the packed value
+                int pixelNumber = pixelData[i];
+                int spanLength = pixelData[i + 1];
+                ConvertPixelNumberToXY(pixelNumber, width, out int xStart, out int yStart);
 
-                for (int x = xStart; x < xStart + spanLength; x++)
+                UnpackXYZ(pixelData[i + 2], out int R, out int G, out int B); // Unpack RGB from the packed value
+
+                int remainingSpan = spanLength;
+                int y = yStart;
+
+                while (remainingSpan > 0)
                 {
-                    Color newPixelColor = Color.FromArgb(R, G, B);
-                    _currentBitmap.SetPixel(x, y, newPixelColor);
-                    nPixelsChanged++;
+                    for (int x = xStart; x < width && remainingSpan > 0; x++)
+                    {
+                        Color newPixelColor = Color.FromArgb(R, G, B);
+                        _currentBitmap.SetPixel(x, y, newPixelColor);
+                        nPixelsChanged++;
+                        remainingSpan--;
+                    }
+
+                    // If there's still more of the span left, move to the next row
+                    if (remainingSpan > 0)
+                    {
+                        y++;
+                        xStart = 0; // reset the starting x to the beginning of the row
+                    }
                 }
             }
 
@@ -228,7 +255,7 @@ namespace ResoniteNESApp
                     writer.Write(DateTime.UtcNow.Millisecond);
 
                     // Write the count of pixels next.
-                    writer.Write(pixelData.Count / 2); // RGB data of contiguous pixels is represented by 4 ints: (x, y, span, packedRGB)
+                    writer.Write(pixelData.Count / 3); // RGB data is now represented by 3 ints: (pixel number, span, packedRGB)
 
                     // Then write the pixel data
                     foreach (int value in pixelData)
@@ -263,8 +290,7 @@ namespace ResoniteNESApp
                     // Read the count of pixels that have changed.
                     int changedPixelsCount = reader.ReadInt32();
 
-                    // RGB data of contiguous pixels is represented by 4 ints: (x, y, span, packedRGB)
-                    int dataToRead = changedPixelsCount * 2;
+                    int dataToRead = changedPixelsCount * 3; // Since we have 3 ints now per pixel data
 
                     for (int i = 0; i < dataToRead; i++)
                     {
