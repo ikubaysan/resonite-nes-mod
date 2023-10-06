@@ -52,6 +52,7 @@
             this.checkBox1 = new System.Windows.Forms.CheckBox();
             this.label2 = new System.Windows.Forms.Label();
             this.tabPage2 = new System.Windows.Forms.TabPage();
+            this.checkBox5 = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             this.tabControl1.SuspendLayout();
             this.tabPage1.SuspendLayout();
@@ -114,6 +115,7 @@
             // 
             // tabPage1
             // 
+            this.tabPage1.Controls.Add(this.checkBox5);
             this.tabPage1.Controls.Add(this.label8);
             this.tabPage1.Controls.Add(this.textBox6);
             this.tabPage1.Controls.Add(this.checkBox4);
@@ -235,7 +237,7 @@
             this.checkBox2.AutoSize = true;
             this.checkBox2.Checked = true;
             this.checkBox2.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.checkBox2.Location = new System.Drawing.Point(560, 308);
+            this.checkBox2.Location = new System.Drawing.Point(581, 308);
             this.checkBox2.Name = "checkBox2";
             this.checkBox2.Size = new System.Drawing.Size(72, 17);
             this.checkBox2.TabIndex = 8;
@@ -254,11 +256,11 @@
             // checkBox1
             // 
             this.checkBox1.AutoSize = true;
-            this.checkBox1.Location = new System.Drawing.Point(448, 308);
+            this.checkBox1.Location = new System.Drawing.Point(420, 309);
             this.checkBox1.Name = "checkBox1";
-            this.checkBox1.Size = new System.Drawing.Size(65, 17);
+            this.checkBox1.Size = new System.Drawing.Size(65, 30);
             this.checkBox1.TabIndex = 7;
-            this.checkBox1.Text = "Enabled";
+            this.checkBox1.Text = "Server\r\nEnabled";
             this.checkBox1.UseVisualStyleBackColor = true;
             // 
             // label2
@@ -279,6 +281,18 @@
             this.tabPage2.TabIndex = 1;
             this.tabPage2.Text = "tabPage2";
             this.tabPage2.UseVisualStyleBackColor = true;
+            // 
+            // checkBox5
+            // 
+            this.checkBox5.AutoSize = true;
+            this.checkBox5.Checked = true;
+            this.checkBox5.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.checkBox5.Location = new System.Drawing.Point(501, 309);
+            this.checkBox5.Name = "checkBox5";
+            this.checkBox5.Size = new System.Drawing.Size(65, 30);
+            this.checkBox5.TabIndex = 21;
+            this.checkBox5.Text = "Preview\r\nEnabled";
+            this.checkBox5.UseVisualStyleBackColor = true;
             // 
             // Form1
             // 
@@ -323,6 +337,7 @@
         private System.Windows.Forms.CheckBox checkBox4;
         private System.Windows.Forms.Label label8;
         private System.Windows.Forms.TextBox textBox6;
+        private System.Windows.Forms.CheckBox checkBox5;
     }
 }
 

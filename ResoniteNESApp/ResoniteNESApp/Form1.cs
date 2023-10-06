@@ -171,8 +171,11 @@ namespace ResoniteNESApp
             ReadPixelDataFromMemoryMappedFile();
             if (readPixelData == null) return;
 
-            // Convert pixel data to Bitmap and set to PictureBox
-            pictureBox1.Image = SetPixelDataToBitmap(FRAME_WIDTH, FRAME_HEIGHT);
+            if (checkBox5.Checked)
+            {
+                // Preview is enabled, so convert pixel data to Bitmap and set to PictureBox
+                pictureBox1.Image = SetPixelDataToBitmap(FRAME_WIDTH, FRAME_HEIGHT);
+            }
 
             if (checkBox4.Checked)
             {
