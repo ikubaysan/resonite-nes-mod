@@ -245,20 +245,29 @@ namespace ResoniteNESMod
 
                     // Read the pairs of 16-bit integers (identicalRowRanges)
                     identicalRowRangesFromMMF = new List<(short, short)>();
-                    while (true)
-                    {
-                        short endIndex = _binaryReader.ReadInt16();
-                        short span = _binaryReader.ReadInt16();
 
-                        if (span < 0)  // Negative span indicates the end of the range list
+                    if (_binaryReader.ReadInt16() < 0)
+                    {
+                        // If the first 16-bit int is negative, that indicates that there are no identicalRowRanges
+                    }
+                    else
+                    {
+                        _memoryMappedViewStream.Position -= sizeof(short); // Rewind the stream by 2 bytes, so we don't have to store the 1st 16 bit int
+                        while (true)
                         {
-                            span = (short)-span;  // Convert span back to positive
-                            identicalRowRangesFromMMF.Add((endIndex, span));
-                            break;
-                        }
-                        else
-                        {
-                            identicalRowRangesFromMMF.Add((endIndex, span));
+                            short endIndex = _binaryReader.ReadInt16();
+                            short span = _binaryReader.ReadInt16();
+
+                            if (span < 0)  // Negative span indicates the end of the range list
+                            {
+                                span = (short)-span;  // Convert span back to positive
+                                identicalRowRangesFromMMF.Add((endIndex, span));
+                                break;
+                            }
+                            else
+                            {
+                                identicalRowRangesFromMMF.Add((endIndex, span));
+                            }
                         }
                     }
 
