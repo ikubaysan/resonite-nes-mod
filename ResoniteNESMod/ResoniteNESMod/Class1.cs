@@ -76,6 +76,7 @@ namespace ResoniteNESMod
             private static MemoryMappedFile _clientRenderConfirmationMemoryMappedFile;
             private static int latestReceivedFrameMillisecondsOffset = -1;
             private static DateTime latestInitializationAttempt = DateTime.MinValue;
+            private static int ConsecutiveSetPixelDataToCanvasCalls = 0;
 
             static void Postfix(Canvas __instance)
             {
@@ -215,9 +216,10 @@ namespace ResoniteNESMod
                     if (!colorCache.TryGetValue(packedRGB, out cachedColor))
                     {
                         // If not, create and cache it
-                        R = ((packedRGB / 1000000) % 1000) / 1000f;
-                        G = ((packedRGB / 1000) % 1000) / 1000f;
-                        B = (packedRGB % 1000) / 1000f;
+                        R = (float)Math.Round((((packedRGB / 1000000) % 1000) / 1000f), 2);
+                        G = (float)Math.Round((((packedRGB / 1000) % 1000) / 1000f), 2);
+                        B = (float)Math.Round((packedRGB % 1000) / 1000f, 2);
+
                         //cachedColor = new colorX(R + 0.01f, G + 0.01f, B + 0.01f, 1);
                         cachedColor = new colorX(R, G, B, 1, ColorProfile.Linear);
                         colorCache[packedRGB] = cachedColor;
@@ -419,14 +421,16 @@ namespace ResoniteNESMod
                             isIdentincalRowRangeEndIndex[range.EndIndex] = 1;
                             identincalRowSpanByEndIndex[range.EndIndex] = range.Span;
                         }
-
+                            
+                            /*
                             Msg($"IsIdenticalRow: {string.Join("; ", isIdenticalRow)}");
                             Msg($"IsIdentincalRowRangeEndIndex: {string.Join("; ", isIdentincalRowRangeEndIndex)}");
                             Msg($"identincalRowSpanByEndIndex: {string.Join("; ", identincalRowSpanByEndIndex)}");
                             Msg($"identicalRowIndices: {string.Join("; ", identicalRowIndices)}");
                             Msg($"identicalRowCount: {identicalRowCount}");
-                            //Msg ($"readPixelDataLength: {readPixelDataLength}");
-                            //Msg($"Length of readPixelData array: {readPixelData.Length}");
+                            Msg ($"readPixelDataLength: {readPixelDataLength}");
+                            Msg($"Length of readPixelData array: {readPixelData.Length}");
+                            */
                         return;
                     }
 
@@ -443,7 +447,13 @@ namespace ResoniteNESMod
                         readPixelDataLength = -1;
                         return;
                     }
-                    readPixelDataLength = -1;
+                    ConsecutiveSetPixelDataToCanvasCalls++;
+
+                    if (ConsecutiveSetPixelDataToCanvasCalls == 1)
+                    {
+                        ConsecutiveSetPixelDataToCanvasCalls = 0;
+                        readPixelDataLength = -1;
+                    }
                     return;
                 }
             }
