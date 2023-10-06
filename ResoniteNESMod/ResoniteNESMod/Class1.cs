@@ -77,6 +77,7 @@ namespace ResoniteNESMod
             private static int latestReceivedFrameMillisecondsOffset = -1;
             private static DateTime latestInitializationAttempt = DateTime.MinValue;
             private static int ConsecutiveSetPixelDataToCanvasCalls = 0;
+            private static colorX[][] colorXArray;
 
             static void Postfix(Canvas __instance)
             {
@@ -166,6 +167,7 @@ namespace ResoniteNESMod
                 // Initialize the cache
                 imageComponentCache = new Image[canvasSlotHeight][];
                 horizontalLayoutComponentCache = new HorizontalLayout[canvasSlotHeight];
+                colorXArray = new colorX[canvasSlotHeight][];
 
                 // For the count of the height constant, call contentSlot.AddSlot
                 for (int i = 0; i < canvasSlotHeight; i++)
@@ -176,6 +178,7 @@ namespace ResoniteNESMod
                     horizontalLayoutComponentCache[i] = horizontalLayoutComponent;
                     horizontalLayoutComponent.PaddingTop.Value = i;
                     horizontalLayoutComponent.PaddingBottom.Value = canvasSlotHeight - i - 1;
+                    colorXArray[i] = new colorX[canvasSlotWidth];
 
                     // Create new slots for each column in the horizontal layout and add them to the cache
                     imageComponentCache[i] = new Image[canvasSlotWidth];
@@ -190,6 +193,7 @@ namespace ResoniteNESMod
                         // Set the tint to a random color
                         colorX randomColor = new colorX((float)rand.NextDouble(), (float)rand.NextDouble(), (float)rand.NextDouble(), 1);
                         imageComponent.Tint.Value = randomColor;
+                        colorXArray[i][j] = randomColor;
                     }
                 }
                 Msg("Created new HorizontalLayouts according to the height constant: " + canvasSlotHeight);
@@ -244,8 +248,9 @@ namespace ResoniteNESMod
 
                         for (int x = xStart; x < xStart + spanLength; x++)
                         {
-                            imageComponentCache[y][x].Tint.Value = cachedColor;
+                            //imageComponentCache[y][x].Tint.Value = cachedColor;
                             //logBuilder.AppendFormat("{0}, {1}{2}{3}; ", packedRGB, x, y, spanLength);
+                            colorXArray[y][x] = cachedColor;
                         }
                     }
                     i++; // Skip the negative delimiter. We've hit a new color.
@@ -389,12 +394,28 @@ namespace ResoniteNESMod
                 }
             }
 
+            static void ReassignTints()
+            {
+                for (int i = 0; i < colorXArray.Length; i++)
+                {
+                    for (int j = 0; j < colorXArray[i].Length; j++)
+                    {
+                        // For some reason, this fixes the artifacting a large majority of the time.
+                        imageComponentCache[i][j].Tint.Value = new colorX(0, 0, 0, 1, ColorProfile.Linear);
+                        imageComponentCache[i][j].Tint.Value = colorXArray[i][j];
+                    }
+                }
+                //Msg("Reassigned tints");
+            }
+
             [HarmonyPatch(typeof(FrooxEngine.Animator), "OnCommonUpdate")]
             public static class AnimatorOnCommonUpdatePatcher
             {
                 public static void Postfix()
                 {
                     if (!initialized || _latestCanvasInstance == null) return;
+
+                    ReassignTints();
 
                     if (readPixelDataLength == -1 && Config.GetValue(ENABLED))
                     {
