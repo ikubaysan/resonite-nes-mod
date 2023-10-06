@@ -56,7 +56,7 @@ namespace ResoniteNESMod
             private static Canvas _latestCanvasInstance;
             private static MemoryMappedFile _memoryMappedFile;
             private const string MemoryMappedFileName = "ResonitePixelData";
-            private static Image[][] imageComponentCache;
+            private static RawGraphic[][] rawGraphicComponentCache;
             private static HorizontalLayout[] horizontalLayoutComponentCache;
             private static int[] readPixelData;
             private static int readPixelDataLength = -1;
@@ -158,7 +158,7 @@ namespace ResoniteNESMod
                 Random rand = new Random();
 
                 // Initialize the cache
-                imageComponentCache = new Image[canvasSlotHeight][];
+                rawGraphicComponentCache = new RawGraphic[canvasSlotHeight][];
                 horizontalLayoutComponentCache = new HorizontalLayout[canvasSlotHeight];
 
                 // For the count of the height constant, call contentSlot.AddSlot
@@ -172,18 +172,18 @@ namespace ResoniteNESMod
                     horizontalLayoutComponent.PaddingBottom.Value = canvasSlotHeight - i - 1;
 
                     // Create new slots for each column in the horizontal layout and add them to the cache
-                    imageComponentCache[i] = new Image[canvasSlotWidth];
+                    rawGraphicComponentCache[i] = new RawGraphic[canvasSlotWidth];
 
                     // Add a slot for each column in the horizontal layout
                     for (int j = 0; j < canvasSlotWidth; j++)
                     {
                         Slot verticalSlot = horizontalLayoutSlot.AddSlot("VerticalSlot" + j);
                         verticalSlot.AttachComponent<RectTransform>();
-                        Image imageComponent = verticalSlot.AttachComponent<Image>();
-                        imageComponentCache[i][j] = imageComponent;
+                        RawGraphic rawGraphicComponent = verticalSlot.AttachComponent<RawGraphic>();
+                        rawGraphicComponentCache[i][j] = rawGraphicComponent;
                         // Set the tint to a random color
                         colorX randomColor = new colorX((float)rand.NextDouble(), (float)rand.NextDouble(), (float)rand.NextDouble(), 1);
-                        imageComponent.Tint.Value = randomColor;
+                        rawGraphicComponent.Color.Value = randomColor;
                     }
                 }
                 Msg("Created new HorizontalLayouts according to the height constant: " + canvasSlotHeight);
@@ -235,8 +235,8 @@ namespace ResoniteNESMod
                             // For some reason, if I don't do this then I get artifacting.
                             // And yes, I have to create a new colorX object for each pixel I change.
                             // I've even tried making a colorX object and using the same one in this function, but it doesn't help much.
-                            imageComponentCache[y][x].Tint.Value = new colorX(0, 0, 0, 1);
-                            imageComponentCache[y][x].Tint.Value = cachedColor;
+                            //rawGraphicComponentCache[y][x].Color.Value = new colorX(0, 0, 0, 1);
+                            rawGraphicComponentCache[y][x].Color.Value = cachedColor;
                         }
                     }
                     i++; // Skip the negative delimiter. We've hit a new color.
@@ -267,6 +267,14 @@ namespace ResoniteNESMod
                     if (_pixelDataBinaryReader == null)
                     {
                         Console.WriteLine("Binary reader not initialized");
+                        readPixelDataLength = -1;
+                        return;
+                    }
+
+                    short status = _pixelDataBinaryReader.ReadInt16();
+                    if (status == 0)
+                    {
+                        // The data is not ready yet
                         readPixelDataLength = -1;
                         return;
                     }

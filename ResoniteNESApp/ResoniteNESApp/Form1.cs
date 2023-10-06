@@ -48,8 +48,8 @@ namespace ResoniteNESApp
         private const int FRAME_WIDTH = 256;
         private const int FRAME_HEIGHT = 240;
         private int FPS = 24;
-        // Add 1 to account for the count of pixels that have changed, which is always the 1st integer, written before the pixel data.
-        private const int PixelDataMemoryMappedFileSize = ((FRAME_WIDTH * FRAME_HEIGHT * 2) + 1) * sizeof(int);
+        // Add 3 to account for the 3 ints we write before the pixel data
+        private const int PixelDataMemoryMappedFileSize = ((FRAME_WIDTH * FRAME_HEIGHT * 2) + 3) * sizeof(int);
         private MemoryMappedFile _pixelDataMemoryMappedFile;
         private Bitmap _currentBitmap = new Bitmap(FRAME_WIDTH, FRAME_HEIGHT);
         private int fullFrameInterval = 10 * 1000; // 10 seconds in milliseconds
@@ -426,6 +426,8 @@ namespace ResoniteNESApp
                 using (MemoryMappedViewStream stream = _pixelDataMemoryMappedFile.CreateViewStream())
                 using (BinaryWriter writer = new BinaryWriter(stream))
                 {
+                    writer.Write((short)0); // Initially set status to "not ready"
+
                     // We use the sign of the 1st 32-bit integer to indicate whether the frame is force refreshed or not, and also as a way to give the reader a way to know if the frame has changed.
                     latestPublishedFrameMillisecondsOffset = DateTime.UtcNow.Millisecond;
                     if (forceRefreshedFrame) latestPublishedFrameMillisecondsOffset = -latestPublishedFrameMillisecondsOffset;
@@ -439,6 +441,8 @@ namespace ResoniteNESApp
                         writer.Write(value);
                     }
 
+                    stream.Seek(0, SeekOrigin.Begin); // Seek back to the beginning
+                    writer.Write((short)1); // Set status to "ready"
                 }
             }
             catch (Exception ex)
@@ -455,6 +459,15 @@ namespace ResoniteNESApp
                 if (_pixelDataBinaryReader == null)
                 {
                     Console.WriteLine("Binary reader not initialized");
+                    readPixelDataLength = -1;
+                    return;
+                }
+
+
+                short status = _pixelDataBinaryReader.ReadInt16();
+                if (status == 0) 
+                {
+                    // The data is not ready yet
                     readPixelDataLength = -1;
                     return;
                 }
