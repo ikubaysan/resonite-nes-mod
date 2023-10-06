@@ -74,6 +74,7 @@ namespace ResoniteNESApp
         private static int identicalRowCount;
         private static bool forceRefreshedFrameFromMMF;
         private Dictionary<int, int> rowExpansionAmounts = new Dictionary<int, int>();
+        private int minContiguousIdenticalRowSpan = 10;
 
 
 
@@ -284,7 +285,8 @@ namespace ResoniteNESApp
 
         private int[] GeneratePixelDataFromFCEUX(int width, int height, bool forceFullFrame)
         {
-            const int MIN_SPAN_LENGTH = 10;
+            if (int.TryParse(textBox5.Text, out int selectedMinContiguousIdenticalRowSpan) && selectedMinContiguousIdenticalRowSpan > 1 && selectedMinContiguousIdenticalRowSpan < 10000)
+                minContiguousIdenticalRowSpan = selectedMinContiguousIdenticalRowSpan;
 
             Bitmap bmp = CaptureFCEUXWindow();
             if (bmp == null)
@@ -333,7 +335,7 @@ namespace ResoniteNESApp
                 else if (startIdenticalRowIndex.HasValue)
                 {
                     int spanLength = y - startIdenticalRowIndex.Value;
-                    if (spanLength >= MIN_SPAN_LENGTH)
+                    if (spanLength >= minContiguousIdenticalRowSpan)
                     {
                         identicalRowRanges.Add((startIdenticalRowIndex.Value, y - 1));
                     }
@@ -344,7 +346,7 @@ namespace ResoniteNESApp
                 previousRowPixels = currentRowPixels;
                 currentRowPixels = temp;
             }
-            if (startIdenticalRowIndex.HasValue && height - startIdenticalRowIndex.Value >= MIN_SPAN_LENGTH)
+            if (startIdenticalRowIndex.HasValue && height - startIdenticalRowIndex.Value >= minContiguousIdenticalRowSpan)
             {
                 identicalRowRanges.Add((startIdenticalRowIndex.Value, height - 1));
             }
@@ -358,32 +360,32 @@ namespace ResoniteNESApp
                 }
             }
 
-            /*
-            // Print the ranges of contiguous identical rows
-            int totalCount = 0;
-            foreach (var range in identicalRowRanges)
-            {
-                totalCount += (range.End - range.Start + 1);
-            }
-            
-            Console.Write(totalCount + " contiguous identical rows in ranges: ");
-            foreach (var range in identicalRowRanges)
-            {
-                Console.Write("[" + range.Start + "-" + range.End + "] ");
-            }
-            Console.Write("\n");
-            */
-
-            // Print how many rows we force refreshed if the count is > 0
+            // Print how many rows we will force refreshed if the count is > 0
             if (rowsPreviouslyInContiguousRange.Count > 0)
             { 
                 //Console.WriteLine(rowsPreviouslyInContiguousRange.Count + " rows to force refresh.");
                 //forceFullFrame = true;
             }
 
+            // If a row is identical to another row, and is not the last row in the identical range, then we don't need to process it."
+            HashSet<int> skipRows = new HashSet<int>();
+            foreach (var range in identicalRowRanges)
+            {
+                for (int y = range.Start; y < range.End; y++) // Notice that we're going up to but not including the End
+                {
+                    skipRows.Add(y);
+                }
+            }
+
             // Second loop for processing pixel data
             for (int y = 0; y < height; y++)
             {
+                // Check if the row is in the skipRows HashSet
+                if (skipRows.Contains(y))
+                {
+                    continue; // Skip processing for this row
+                }
+
                 int x = 0;
                 bool shouldForceRefresh = forceFullFrame || rowsPreviouslyInContiguousRange.Contains(y);
 
@@ -731,6 +733,7 @@ namespace ResoniteNESApp
 
         private void textBox4_TextChanged(object sender, EventArgs e)
         {
+            // We need to use an event handler because we have to update the timer's interval
             if (int.TryParse(textBox4.Text, out int selectedFPS) && selectedFPS <= 60 && selectedFPS >= 1)
             {
                 FPS = selectedFPS;
