@@ -348,7 +348,11 @@ namespace ResoniteNESApp
             */
 
             // Print how many rows we force refreshed if the count is > 0
-            if (rowsPreviouslyInContiguousRange.Count > 0) Console.WriteLine(rowsPreviouslyInContiguousRange.Count + " rows to force refresh.");
+            if (rowsPreviouslyInContiguousRange.Count > 0)
+            { 
+                Console.WriteLine(rowsPreviouslyInContiguousRange.Count + " rows to force refresh.");
+                forceFullFrame = true;
+            }
 
             // Second loop for processing pixel data
             for (int y = 0; y < height; y++)
@@ -403,6 +407,31 @@ namespace ResoniteNESApp
             return pixelDataList.ToArray();
         }
 
+
+        private void ExpandRow(Bitmap bitmap, int rowIndex, int expandAmount)
+        {
+            if (rowIndex < 0 || rowIndex >= bitmap.Height)
+            {
+                Console.WriteLine("Row index out of bounds.");
+                return;
+            }
+
+            if (expandAmount <= 0 || rowIndex - expandAmount < 0)
+            {
+                Console.WriteLine("Invalid expand amount or not enough rows above to expand.");
+                return;
+            }
+
+            for (int y = rowIndex - 1; y >= rowIndex - expandAmount; y--)
+            {
+                for (int x = 0; x < bitmap.Width; x++)
+                {
+                    Color pixelColor = bitmap.GetPixel(x, rowIndex);
+                    bitmap.SetPixel(x, y, pixelColor);
+                }
+            }
+        }
+
         // Convert pixel data into a Bitmap
         private Bitmap SetPixelDataToBitmap(int width, int height)
         {
@@ -427,6 +456,10 @@ namespace ResoniteNESApp
                 i++; // Skip the negative delimiter
             }
             Console.WriteLine(nPixelsChanged + " pixels changed since previous frame. pixelData len: " + readPixelDataLength); 
+
+            // Just a test
+            //ExpandRow(_currentBitmap, 100, 50);
+
             return _currentBitmap;
         }
 

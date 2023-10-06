@@ -197,10 +197,6 @@ namespace ResoniteNESMod
                 int x, xEnd;
                 colorX cachedColor;
 
-
-
-
-
                 while (i < readPixelDataLength)
                 {
                     packedRGB = readPixelData[i++];
