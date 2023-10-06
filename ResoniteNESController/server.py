@@ -1,24 +1,21 @@
-# server.py
-
 import asyncio
 import websockets
 import pyvjoy
 
 # Button mappings
 BUTTON_MAP = {
-    "btn1": 1,
-    "btn2": 2,
-    "btn3": 3,
-    "btn4": 4,
-    "up": 5,
-    "down": 6,
-    "left": 7,
-    "right": 8,
+    "a": 1,
+    "b": 2,
+    "x": 3,
+    "y": 4,
+    "u": 5,
+    "d": 6,
+    "l": 7,
+    "r": 8,
 }
 
 # Initialize the vJoy device
 vj = pyvjoy.VJoyDevice(1)
-
 
 async def server_handler(websocket, path):
     addr = f"{websocket.remote_address[0]}:{websocket.remote_address[1]}"
@@ -29,15 +26,12 @@ async def server_handler(websocket, path):
             print(f"Received message '{msg}' from {addr}")
 
             # Extract button name and action
-            btn_name, action = msg.split("_")
+            btn_name = msg[0]
+            action = int(msg[1])  # Convert string to int
 
-            # Check if the button name exists in our map
             if btn_name in BUTTON_MAP:
-                if action == "pressed":
-                    vj.set_button(BUTTON_MAP[btn_name], 1)
-                elif action == "released":
-                    vj.set_button(BUTTON_MAP[btn_name], 0)
-                print(f"Button {btn_name} {action}")
+                vj.set_button(BUTTON_MAP[btn_name], action)
+                print(f"Button {btn_name} {'pressed' if action else 'released'}")
             else:
                 print(f"Unknown button {btn_name}")
 
@@ -45,7 +39,6 @@ async def server_handler(websocket, path):
 
     except websockets.exceptions.ConnectionClosed:
         print(f"Client {addr} disconnected")
-
 
 server_address = '127.0.0.1'  # localhost for simplicity, change as needed
 server_port = 1985
