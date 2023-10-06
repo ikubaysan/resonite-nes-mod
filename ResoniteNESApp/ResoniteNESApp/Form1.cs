@@ -516,7 +516,7 @@ namespace ResoniteNESApp
                 // Read the pairs of 16-bit integers (identicalRowRanges)
                 identicalRowRangesFromMMF.Clear();
 
-                if (_binaryReader.ReadInt16() < 0)  
+                if (_binaryReader.ReadInt16() < 0)
                 {
                     // If the first 16-bit int is negative, that indicates that there are no identicalRowRanges
                 }
@@ -526,6 +526,16 @@ namespace ResoniteNESApp
                     while (true)
                     {
                         short endIndex = _binaryReader.ReadInt16();
+
+
+                        if (endIndex > 999)
+                        {
+                            // Something went wrong. This usually happens when I'm alt-tabbing.
+                            // I'm not sure why this happens, but I'm guessing it's because the MMF is not being updated.
+                            // Raise an exception so we read from the MMF again.
+                            throw new Exception("endIndex > 999");
+                        }
+
                         short span = _binaryReader.ReadInt16();
 
                         if (span < 0)  // Negative span indicates the end of the range list
