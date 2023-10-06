@@ -64,10 +64,18 @@ namespace ResoniteNESApp
         private static BinaryReader _binaryReader = null;
         private List<(int Start, int End)> previousIdenticalRowRanges = new List<(int Start, int End)>();
         private List<(int Start, int End)> identicalRowRanges;
-        private static List<(short EndIndex, short Span)> identicalRowRangesFromMMF = new List<(short, short)>();
-        private bool forceRefreshedFrameFromMMF;
         private Dictionary<int, List<int>> rgbToSpans; // Map RGB values to spans
         private int[] pixelData;
+
+        private static List<(short EndIndex, short Span)> identicalRowRangesFromMMF = new List<(short, short)>();
+        private static int[] isIdenticalRow;
+        private static int[] isIdentincalRowRangeEndIndex;
+        private static int[] identincalRowSpanByEndIndex;
+        private static int[] identicalRowIndices;
+        private static int identicalRowCount;
+        private static bool forceRefreshedFrameFromMMF;
+        private Dictionary<int, int> rowExpansionAmounts = new Dictionary<int, int>();
+
 
 
 
@@ -122,6 +130,28 @@ namespace ResoniteNESApp
             Console.WriteLine($"Identical Row Ranges from MMF: {string.Join("; ", identicalRowRangesFromMMF.Select(range => $"End Index: {range.EndIndex}, Span: {range.Span}"))}");
 
             if (readPixelData == null) return;
+
+
+
+            isIdenticalRow = new int[FRAME_HEIGHT];
+            isIdentincalRowRangeEndIndex = new int[FRAME_HEIGHT];
+            identincalRowSpanByEndIndex = new int[FRAME_HEIGHT];
+            identicalRowIndices = new int[FRAME_HEIGHT];
+            identicalRowCount = 0;
+
+
+            foreach (var range in identicalRowRangesFromMMF)
+            {
+                int startIndex = range.EndIndex - range.Span + 1;
+                for (int i = startIndex; i <= range.EndIndex; i++)
+                {
+                    isIdenticalRow[i] = 1;
+                    identicalRowIndices[identicalRowCount] = i;
+                    identicalRowCount++;
+                }
+                isIdentincalRowRangeEndIndex[range.EndIndex] = 1;
+                identincalRowSpanByEndIndex[range.EndIndex] = range.Span;
+            }
 
             // Convert pixel data to Bitmap and set to PictureBox
             pictureBox1.Image = SetPixelDataToBitmap(FRAME_WIDTH, FRAME_HEIGHT);
@@ -408,7 +438,19 @@ namespace ResoniteNESApp
         }
 
 
-        private void ExpandRow(Bitmap bitmap, int rowIndex, int expandAmount)
+        public void UpdateRowHeight(int rowIndex, int rowHeight)
+        {
+            if (rowIndex < 0 || rowHeight < 1)
+            {
+                Console.WriteLine("Invalid row index or height.");
+                return;
+            }
+
+            rowExpansionAmounts[rowIndex] = rowHeight;
+        }
+
+
+        private void SetRowHeight(Bitmap bitmap, int rowIndex, int rowHeight)
         {
             if (rowIndex < 0 || rowIndex >= bitmap.Height)
             {
@@ -416,13 +458,15 @@ namespace ResoniteNESApp
                 return;
             }
 
-            if (expandAmount <= 0 || rowIndex - expandAmount < 0)
+            if (rowHeight < 1 || bitmap.Height - rowIndex - rowHeight >= 0)
             {
-                Console.WriteLine("Invalid expand amount or not enough rows above to expand.");
+                Console.WriteLine("Invalid row height or not enough rows below to set.");
                 return;
             }
 
-            for (int y = rowIndex - 1; y >= rowIndex - expandAmount; y--)
+            // Expand the row upwards based on its height.
+            // Greater rowIndex means lower on the screen.
+            for (int y = rowIndex; y >= rowIndex - rowHeight; y--)
             {
                 for (int x = 0; x < bitmap.Width; x++)
                 {
@@ -446,6 +490,14 @@ namespace ResoniteNESApp
                 {
                     int packedxStartYSpan = readPixelData[i++];
                     UnpackXYZ(packedxStartYSpan, out int xStart, out int y, out int spanLength);
+
+                    /*
+                    if (isIdenticalRow[y] == 1 && !forceRefreshedFrameFromMMF)
+                    {
+                        if (isIdentincalRowRangeEndIndex[y] != 1) continue;
+                    }
+                    */
+
                     for (int x = xStart; x < xStart + spanLength; x++)
                     {
                         Color newPixelColor = Color.FromArgb(R, G, B);
@@ -455,10 +507,17 @@ namespace ResoniteNESApp
                 }
                 i++; // Skip the negative delimiter
             }
-            Console.WriteLine(nPixelsChanged + " pixels changed since previous frame. pixelData len: " + readPixelDataLength); 
+            Console.WriteLine(nPixelsChanged + " pixels changed since previous frame. pixelData len: " + readPixelDataLength);
+
 
             // Just a test
-            //ExpandRow(_currentBitmap, 100, 50);
+            //UpdateRowHeight(235, 50);
+
+            // After setting all pixels, apply the row expansions
+            foreach (var row in rowExpansionAmounts)
+            {
+                SetRowHeight(_currentBitmap, row.Key, row.Value);
+            }
 
             return _currentBitmap;
         }
