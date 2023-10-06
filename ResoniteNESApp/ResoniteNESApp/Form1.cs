@@ -71,7 +71,6 @@ namespace ResoniteNESApp
         private static int[] isIdenticalRow;
         private static int[] isIdentincalRowRangeEndIndex;
         private static int[] identincalRowSpanByEndIndex;
-        private static int[] identicalRowIndices;
         private static int identicalRowCount;
         private static bool forceRefreshedFrameFromMMF;
         private Dictionary<int, int> rowExpansionAmounts = new Dictionary<int, int>();
@@ -136,7 +135,6 @@ namespace ResoniteNESApp
             isIdenticalRow = new int[FRAME_HEIGHT];
             isIdentincalRowRangeEndIndex = new int[FRAME_HEIGHT];
             identincalRowSpanByEndIndex = new int[FRAME_HEIGHT];
-            identicalRowIndices = new int[FRAME_HEIGHT];
             identicalRowCount = 0;
 
 
@@ -146,7 +144,6 @@ namespace ResoniteNESApp
                 for (int i = startIndex; i <= range.EndIndex; i++)
                 {
                     isIdenticalRow[i] = 1;
-                    identicalRowIndices[identicalRowCount] = i;
                     identicalRowCount++;
                 }
                 isIdentincalRowRangeEndIndex[range.EndIndex] = 1;
@@ -559,7 +556,7 @@ namespace ResoniteNESApp
                 }
             }
 
-            //Console.WriteLine(nPixelsChanged + " pixels changed since previous frame. pixelData len: " + readPixelDataLength);
+            Console.WriteLine(nPixelsChanged + " pixels updated since previous frame. pixelData len: " + readPixelDataLength);
 
             // After setting all pixels, apply the row expansions
             foreach (var row in rowExpansionAmounts)
