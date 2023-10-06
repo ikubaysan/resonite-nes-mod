@@ -50,7 +50,7 @@ async def server_handler(websocket, path):
 server_address = '127.0.0.1'  # localhost for simplicity, change as needed
 server_port = 1985
 
-start_server = websockets.serve(server_handler, server_address, server_port)
+start_server = websockets.serve(server_handler, server_address, server_port, ping_interval=None, ping_timeout=None)
 
 print(f"Server is running at ws://{server_address}:{server_port}")
 
