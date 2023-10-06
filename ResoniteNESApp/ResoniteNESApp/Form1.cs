@@ -61,6 +61,7 @@ namespace ResoniteNESApp
         private int readPixelDataLength;
         private static MemoryMappedViewStream _memoryMappedViewStream = null;
         private static BinaryReader _binaryReader = null;
+        private List<(int Start, int End)> previousIdenticalRowRanges = new List<(int Start, int End)>();
 
 
         public Form1()
@@ -277,6 +278,16 @@ namespace ResoniteNESApp
             List<(int Start, int End)> identicalRowRanges = new List<(int Start, int End)>();
             int? startIdenticalRowIndex = null;
 
+            // Create a set of rows that were previously in a contiguous identical range
+            var rowsPreviouslyInContiguousRange = new HashSet<int>();
+            foreach (var range in previousIdenticalRowRanges)
+            {
+                for (int y = range.Start; y <= range.End; y++)
+                {
+                    rowsPreviouslyInContiguousRange.Add(y);
+                }
+            }
+
             // First loop to identify identical rows
             for (int y = 0; y < height; y++)
             {
@@ -313,6 +324,15 @@ namespace ResoniteNESApp
                 identicalRowRanges.Add((startIdenticalRowIndex.Value, height - 1));
             }
 
+            // Remove rows from the set that are still in a contiguous identical range
+            foreach (var range in identicalRowRanges)
+            {
+                for (int y = range.Start; y <= range.End; y++)
+                {
+                    rowsPreviouslyInContiguousRange.Remove(y);
+                }
+            }
+
             // Print the ranges of contiguous identical rows
             int totalCount = 0;
             foreach (var range in identicalRowRanges)
@@ -326,16 +346,21 @@ namespace ResoniteNESApp
             }
             Console.Write("\n");
 
+            // Print how many rows we force refreshed if the count is > 0
+            if (rowsPreviouslyInContiguousRange.Count > 0) Console.WriteLine(rowsPreviouslyInContiguousRange.Count + " rows to force refresh.");
+
             // Second loop for processing pixel data
             for (int y = 0; y < height; y++)
             {
                 int x = 0;
+                bool shouldForceRefresh = forceFullFrame || rowsPreviouslyInContiguousRange.Contains(y);
+
                 while (x < width)
                 {
                     Color pixel = bmp.GetPixel(x, y);
                     Color currentPixel = _currentBitmap.GetPixel(x, y);
 
-                    if (forceFullFrame || !currentPixel.Equals(pixel))
+                    if (shouldForceRefresh || !currentPixel.Equals(pixel))
                     {
                         int spanStart = x;
                         int packedRGB = PackXYZ(pixel.R, pixel.G, pixel.B);
@@ -370,13 +395,12 @@ namespace ResoniteNESApp
             }
 
             bmp.Dispose();
+
+            // Update the previousIdenticalRowRanges
+            previousIdenticalRowRanges = identicalRowRanges;
+
             return pixelDataList.ToArray();
         }
-
-
-
-
-
 
         // Convert pixel data into a Bitmap
         private Bitmap SetPixelDataToBitmap(int width, int height)
