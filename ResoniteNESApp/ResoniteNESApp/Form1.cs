@@ -49,17 +49,15 @@ namespace ResoniteNESApp
         private const int FRAME_HEIGHT = 240;
         private int FPS = 24;
         // Add 1 to account for the count of pixels that have changed, which is always the 1st integer, written before the pixel data.
-        // Then add FRAME_HEIGHT * 2 to account for pairs of 16-bit integers for identicalRowRanges
-        private const int PixelDataMemoryMappedFileSize = (((FRAME_WIDTH * FRAME_HEIGHT * 2) + 1) * sizeof(int)) + (FRAME_HEIGHT * 2 * sizeof(short));
+        private const int PixelDataMemoryMappedFileSize = ((FRAME_WIDTH * FRAME_HEIGHT * 2) + 1) * sizeof(int);
         private MemoryMappedFile _pixelDataMemoryMappedFile;
         private Bitmap _currentBitmap = new Bitmap(FRAME_WIDTH, FRAME_HEIGHT);
         private int fullFrameInterval = 10 * 1000; // 10 seconds in milliseconds
         private DateTime _lastFullFrameTime = DateTime.MinValue;
+        private DateTime _lastFrameTime = DateTime.MinValue;
         private DateTime programStartTime;
         int[] readPixelData = new int[FRAME_WIDTH * FRAME_HEIGHT];
         private int readPixelDataLength;
-        private List<(int Start, int End)> previousIdenticalRowRanges = new List<(int Start, int End)>();
-        private List<(int Start, int End)> identicalRowRanges;
         private Dictionary<int, List<int>> rgbToSpans; // Map RGB values to spans
         private int[] pixelData;
 
@@ -68,28 +66,13 @@ namespace ResoniteNESApp
         private static BinaryReader _pixelDataBinaryReader = null;
         private Int32 latestPublishedFrameMillisecondsOffset;
 
-        private static MemoryMappedViewStream _clientRenderConfirmationMemoryMappedViewStream = null;
-        private static BinaryReader _clientRenderConfirmationMemoryMappedBinaryReader = null;
-
-
         // Variables for mocking mod
-        private static List<(short EndIndex, short Span)> identicalRowRangesFromMMF = new List<(short, short)>();
-        private static int[] isIdenticalRow;
-        private static int[] isIdentincalRowRangeEndIndex;
-        private static int[] identincalRowSpanByEndIndex;
-        private static int identicalRowCount;
         private static bool forceRefreshedFrameFromMMF;
-        private Dictionary<int, int> rowExpansionAmounts = new Dictionary<int, int>();
-        private int minContiguousIdenticalRowSpan = 10;
         private int latestReceivedFrameMillisecondsOffset = -1;
         private const string ClientRenderConfirmationMemoryMappedFileName = "ResoniteClientRenderConfirmation";
         private const int ClientRenderConfirmationMemoryMappedFileSize = sizeof(int);
         private MemoryMappedFile _clientRenderConfirmationMemoryMappedFile;
-
-
-
-
-
+        private const int clientRenderConfirmedAfterSeconds = 5; // We will assume the client has rendered the frame after this many seconds have passed since the frame was published
 
         public Form1()
         {
@@ -118,6 +101,12 @@ namespace ResoniteNESApp
         /// <returns></returns>
         private bool clientRenderConfirmed()
         {
+
+            if ((DateTime.Now - _lastFrameTime).TotalSeconds >= clientRenderConfirmedAfterSeconds)
+            {
+                return true;
+            }
+
             try
             {
                 using (MemoryMappedFile mmf = MemoryMappedFile.OpenExisting(ClientRenderConfirmationMemoryMappedFileName))
@@ -163,6 +152,7 @@ namespace ResoniteNESApp
                 forceFullFrame = true;
                 _lastFullFrameTime = DateTime.Now;
             }
+            _lastFrameTime = DateTime.Now;
 
             // Generate pixel data
             pixelData = GeneratePixelDataFromFCEUX(FRAME_WIDTH, FRAME_HEIGHT, forceFullFrame);
@@ -179,27 +169,7 @@ namespace ResoniteNESApp
             }
 
             ReadPixelDataFromMemoryMappedFile();
-            //Console.WriteLine($"Identical Row Ranges from MMF: {string.Join("; ", identicalRowRangesFromMMF.Select(range => $"End Index: {range.EndIndex}, Span: {range.Span}"))}");
-
             if (readPixelData == null) return;
-
-            isIdenticalRow = new int[FRAME_HEIGHT];
-            isIdentincalRowRangeEndIndex = new int[FRAME_HEIGHT];
-            identincalRowSpanByEndIndex = new int[FRAME_HEIGHT];
-            identicalRowCount = 0;
-
-
-            foreach (var range in identicalRowRangesFromMMF)
-            {
-                int startIndex = range.EndIndex - range.Span + 1;
-                for (int i = startIndex; i <= range.EndIndex; i++)
-                {
-                    isIdenticalRow[i] = 1;
-                    identicalRowCount++;
-                }
-                isIdentincalRowRangeEndIndex[range.EndIndex] = 1;
-                identincalRowSpanByEndIndex[range.EndIndex] = range.Span;
-            }
 
             // Convert pixel data to Bitmap and set to PictureBox
             pictureBox1.Image = SetPixelDataToBitmap(FRAME_WIDTH, FRAME_HEIGHT);
@@ -341,8 +311,6 @@ namespace ResoniteNESApp
 
         private int[] GeneratePixelDataFromFCEUX(int width, int height, bool forceFullFrame)
         {
-            if (int.TryParse(textBox5.Text, out int selectedMinContiguousIdenticalRowSpan) && selectedMinContiguousIdenticalRowSpan > 1)
-                minContiguousIdenticalRowSpan = selectedMinContiguousIdenticalRowSpan;
 
             Bitmap bmp = CaptureFCEUXWindow();
             if (bmp == null)
@@ -354,103 +322,16 @@ namespace ResoniteNESApp
             List<int> pixelDataList = new List<int>();
             rgbToSpans = new Dictionary<int, List<int>>(); // Map RGB values to spans
 
-            List<Color> previousRowPixels = new List<Color>();
-            List<Color> currentRowPixels = new List<Color>();
-
-            // Start and End are both inclusive
-            identicalRowRanges = new List<(int Start, int End)>();
-            int? startIdenticalRowIndex = null;
-
-            // Create a set of rows that were previously in a contiguous identical range
-            var rowsPreviouslyInContiguousRange = new HashSet<int>();
-            foreach (var range in previousIdenticalRowRanges)
-            {
-                for (int y = range.Start; y <= range.End; y++)
-                {
-                    rowsPreviouslyInContiguousRange.Add(y);
-                }
-            }
-
-            // First loop to identify identical rows
+            // Processing pixel data
             for (int y = 0; y < height; y++)
             {
-                currentRowPixels.Clear();
-
-                for (int x = 0; x < width; x++)
-                {
-                    currentRowPixels.Add(bmp.GetPixel(x, y));
-                }
-
-                if (currentRowPixels.SequenceEqual(previousRowPixels))
-                {
-                    if (!startIdenticalRowIndex.HasValue)
-                    {
-                        startIdenticalRowIndex = y - 1;
-                    }
-                }
-                else if (startIdenticalRowIndex.HasValue)
-                {
-                    int spanLength = y - startIdenticalRowIndex.Value;
-                    if (spanLength >= minContiguousIdenticalRowSpan)
-                    {
-                        identicalRowRanges.Add((startIdenticalRowIndex.Value, y - 1));
-                    }
-                    startIdenticalRowIndex = null;
-                }
-
-                var temp = previousRowPixels;
-                previousRowPixels = currentRowPixels;
-                currentRowPixels = temp;
-            }
-            if (startIdenticalRowIndex.HasValue && height - startIdenticalRowIndex.Value >= minContiguousIdenticalRowSpan)
-            {
-                identicalRowRanges.Add((startIdenticalRowIndex.Value, height - 1));
-            }
-
-            // Remove rows from the set that are still in a contiguous identical range
-            foreach (var range in identicalRowRanges)
-            {
-                for (int y = range.Start; y <= range.End; y++)
-                {
-                    rowsPreviouslyInContiguousRange.Remove(y);
-                }
-            }
-
-            // Print how many rows we will force refreshed if the count is > 0
-            if (rowsPreviouslyInContiguousRange.Count > 0)
-            { 
-                //Console.WriteLine(rowsPreviouslyInContiguousRange.Count + " rows to force refresh.");
-                //forceFullFrame = true;
-            }
-
-            // If a row is identical to another row, and is not the last row in the identical range, then we don't need to process it."
-            HashSet<int> skipRows = new HashSet<int>();
-            foreach (var range in identicalRowRanges)
-            {
-                for (int y = range.Start; y < range.End; y++) // Notice that we're going up to but not including the End
-                {
-                    skipRows.Add(y);
-                }
-            }
-
-            // Second loop for processing pixel data
-            for (int y = 0; y < height; y++)
-            {
-                // Check if the row is in the skipRows HashSet
-                if (skipRows.Contains(y))
-                {
-                    continue; // Skip processing for this row
-                }
-
                 int x = 0;
-                bool shouldForceRefresh = forceFullFrame || rowsPreviouslyInContiguousRange.Contains(y);
-
                 while (x < width)
                 {
                     Color pixel = bmp.GetPixel(x, y);
                     Color currentPixel = _currentBitmap.GetPixel(x, y);
 
-                    if (shouldForceRefresh || !currentPixel.Equals(pixel))
+                    if (forceFullFrame || !currentPixel.Equals(pixel))
                     {
                         int spanStart = x;
                         int packedRGB = PackXYZ(pixel.R, pixel.G, pixel.B);
@@ -486,75 +367,7 @@ namespace ResoniteNESApp
 
             bmp.Dispose();
 
-            // Update the previousIdenticalRowRanges
-            previousIdenticalRowRanges = identicalRowRanges;
-
             return pixelDataList.ToArray();
-        }
-
-
-
-        public int GetRowHeight(int rowIndex)
-        {
-            if (rowIndex < 0 || rowIndex >= FRAME_HEIGHT)
-            {
-                Console.WriteLine("Invalid row index.");
-                return -1;
-            }
-
-            if (rowExpansionAmounts.ContainsKey(rowIndex))
-            {
-                return rowExpansionAmounts[rowIndex];
-            }
-            else
-            {
-                return 1;
-            }
-        }
-
-
-        public void SetRowHeight(int rowIndex, int rowHeight)
-        {
-            if (rowIndex < 0 || rowHeight < 1)
-            {
-                Console.WriteLine("Invalid row index or height.");
-                return;
-            }
-
-            rowExpansionAmounts[rowIndex] = rowHeight;
-        }
-
-
-        private void ApplyRowHeight(Bitmap bitmap, int rowIndex, int rowHeight)
-        {
-
-
-
-            if (rowIndex < 0 || rowIndex >= bitmap.Height)
-            {
-                Console.WriteLine("Row index out of bounds.");
-                return;
-            }
-
-            if (rowHeight < 1 || rowIndex - rowHeight < -1)
-            {
-                Console.WriteLine("Invalid row height or not enough rows below to set.");
-                return;
-            }
-
-            // Expand the row upwards based on its height.
-            // Greater rowIndex means lower on the screen.
-            List<int> updatedRows = new List<int>();
-            for (int y = rowIndex; y > rowIndex - rowHeight; y--)
-            {
-                for (int x = 0; x < bitmap.Width; x++)
-                {
-                    Color pixelColor = bitmap.GetPixel(x, rowIndex);
-                    bitmap.SetPixel(x, y, pixelColor);
-                }
-                updatedRows.Add(y);
-            }
-            return;
         }
 
         // Convert pixel data into a Bitmap
@@ -573,58 +386,15 @@ namespace ResoniteNESApp
                 {
                     int packedxStartYSpan = readPixelData[i++];
                     UnpackXYZ(packedxStartYSpan, out int xStart, out int y, out int spanLength);
-
-                    
-                    if (isIdenticalRow[y] == 1 && !forceRefreshedFrameFromMMF)
-                    {
-                        if (isIdentincalRowRangeEndIndex[y] != 1) continue;
-                    }
-
                     for (int x = xStart; x < xStart + spanLength; x++)
                     {
                         Color newPixelColor = Color.FromArgb(R, G, B);
                         _currentBitmap.SetPixel(x, y, newPixelColor);
                         nPixelsChanged++;
-                        //logBuilder.AppendFormat("{0}, {1}{2}{3}; ", packedRGB, x, y, spanLength);
                     }
                 }
                 i++; // Skip the negative delimiter
             }
-
-            if (!forceRefreshedFrameFromMMF)
-            {
-                for (int j = 0; j < isIdentincalRowRangeEndIndex.Length; j++)
-                {
-                    if (isIdentincalRowRangeEndIndex[j] == 1)
-                    {
-                        int spanLength = identincalRowSpanByEndIndex[j];
-                        if (GetRowHeight(j) != spanLength)
-                        {
-                            SetRowHeight(j, spanLength);
-                            //Console.WriteLine("Set the span of the row at index " + j + " to expanded span " + spanLength);
-                        }
-                    }
-                }
-            }
-
-            // Iterate over horizontalLayoutComponentCache and correct the padding top values
-            for (int j = 0; j < FRAME_HEIGHT; j++)
-            {
-                if (forceRefreshedFrameFromMMF || (isIdenticalRow[j] != 1 && GetRowHeight(j) != 1))
-                {
-                    SetRowHeight(j, 1);
-                    //Console.WriteLine("Reset the span of the row at index " + j + " to 1");
-                }
-            }
-
-            //Console.WriteLine(nPixelsChanged + " pixels updated since previous frame. pixelData len: " + readPixelDataLength);
-
-            // After setting all pixels, apply the row expansions
-            foreach (var row in rowExpansionAmounts)
-            {
-                ApplyRowHeight(_currentBitmap, row.Key, row.Value);
-            }
-            Console.WriteLine(logBuilder.ToString());
             return _currentBitmap;
         }
 
@@ -662,35 +432,6 @@ namespace ResoniteNESApp
 
                     writer.Write(latestPublishedFrameMillisecondsOffset);
                     writer.Write((Int32)pixelData.Length); // The amount of integers that are currently relevant
-
-                    if (identicalRowRanges.Count == 0)
-                    {
-                        // We don't need to write any identicalRowRanges, so we'll just write a -1 to indicate that
-                        // Then the reader will see that the 1st 16 bit int is negative and realize there are no identicalRowRanges
-                        writer.Write((Int16)(-1));
-                    }
-                    else
-                    {
-                        // Writing identicalRowRanges as 16-bit signed integers
-                        for (int i = 0; i < identicalRowRanges.Count; i++)
-                        {
-                            var range = identicalRowRanges[i];
-
-                            Int16 endIndex = (Int16)range.End;
-                            // The ranges are inclusive at both ends, so we need to add 1 to get the span
-                            Int16 span = (Int16)(range.End - range.Start + 1);
-
-                            writer.Write(endIndex);
-                            if (i == identicalRowRanges.Count - 1) // Check if this is the last value
-                            {
-                                writer.Write((Int16)(-span));  // Write negative span as delimiter
-                            }
-                            else
-                            {
-                                writer.Write(span);
-                            }
-                        }
-                    }
 
                     // Finally, write the pixel data
                     foreach (Int32 value in pixelData)
@@ -739,44 +480,6 @@ namespace ResoniteNESApp
 
                 readPixelDataLength = _pixelDataBinaryReader.ReadInt32();
 
-                // Read the pairs of 16-bit integers (identicalRowRanges)
-                identicalRowRangesFromMMF.Clear();
-
-                if (_pixelDataBinaryReader.ReadInt16() < 0)
-                {
-                    // If the first 16-bit int is negative, that indicates that there are no identicalRowRanges
-                }
-                else
-                {
-                    _pixelDataMemoryMappedViewStream.Position -= sizeof(short); // Rewind the stream by 2 bytes, so we don't have to store the 1st 16 bit int
-                    while (true)
-                    {
-                        short endIndex = _pixelDataBinaryReader.ReadInt16();
-
-
-                        if (endIndex > 999)
-                        {
-                            // Something went wrong. This usually happens when I'm alt-tabbing.
-                            // I'm not sure why this happens, but I'm guessing it's because the MMF is not being updated.
-                            // Raise an exception so we read from the MMF again.
-                            throw new Exception("endIndex > 999");
-                        }
-
-                        short span = _pixelDataBinaryReader.ReadInt16();
-
-                        if (span < 0)  // Negative span indicates the end of the range list
-                        {
-                            span = (short)-span;  // Convert span back to positive
-                            identicalRowRangesFromMMF.Add((endIndex, span));
-                            break;
-                        }
-                        else
-                        {
-                            identicalRowRangesFromMMF.Add((endIndex, span));
-                        }
-                    }
-                }
-
                 // Now read the pixel data, based on readPixelDataLength
                 for (int i = 0; i < readPixelDataLength; i++)
                 {
@@ -809,5 +512,7 @@ namespace ResoniteNESApp
                 Console.WriteLine("FPS changed to " + FPS + " and Timer Interval set to " + _timer.Interval);
             }
         }
+
+
     }
 }

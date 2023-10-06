@@ -63,12 +63,6 @@ namespace ResoniteNESMod
             private static MemoryMappedViewStream _memoryMappedViewStream;
             private static BinaryReader _pixelDataBinaryReader;
             private static Dictionary<int, colorX> colorCache = new Dictionary<int, colorX>();
-            private static List<(short EndIndex, short Span)> identicalRowRangesFromMMF = new List<(short, short)>();
-            private static int[] isIdenticalRow;
-            private static int[] isIdentincalRowRangeEndIndex;
-            private static int[] identincalRowSpanByEndIndex;
-            private static int[] identicalRowIndices;
-            private static int identicalRowCount;
             private static bool forceRefreshedFrameFromMMF;
 
             private const string ClientRenderConfirmationMemoryMappedFileName = "ResoniteClientRenderConfirmation";
@@ -204,9 +198,6 @@ namespace ResoniteNESMod
 
             static void SetPixelDataToCanvas(Canvas __instance)
             {
-                //StringBuilder logBuilder = new StringBuilder();
-                //logBuilder.AppendFormat("{0}, {1};", latestReceivedFrameMillisecondsOffset, readPixelDataLength);
-
                 int i = 0;
                 int packedRGB;
                 float Rfloat, Gfloat, Bfloat;
@@ -235,13 +226,6 @@ namespace ResoniteNESMod
                     {
                         int packedxStartYSpan = readPixelData[i++];
                         UnpackXYZ(packedxStartYSpan, out int xStart, out int y, out int spanLength);
-
-
-                        if (isIdenticalRow[y] == 1 && !forceRefreshedFrameFromMMF)
-                        {
-                            if (isIdentincalRowRangeEndIndex[y] != 1) continue;
-                        }
-
                         for (int x = xStart; x < xStart + spanLength; x++)
                         {
                             // For some reason, if I don't do this then I get artifacting.
@@ -252,38 +236,6 @@ namespace ResoniteNESMod
                     }
                     i++; // Skip the negative delimiter. We've hit a new color.
                 }
-
-                if (!forceRefreshedFrameFromMMF)
-                {
-                    for (int j = 0; j < isIdentincalRowRangeEndIndex.Length; j++)
-                    {
-                        if (isIdentincalRowRangeEndIndex[j] == 1)
-                        {
-                            int spanLength = identincalRowSpanByEndIndex[j];
-                            //int targetPaddingTop = j - spanLength - 1;
-                            int targetPaddingTop = j - spanLength;
-                            if (horizontalLayoutComponentCache[j].PaddingTop.Value != targetPaddingTop)
-                            {
-                                horizontalLayoutComponentCache[j].PaddingTop.Value = targetPaddingTop;
-                                //Msg("Set the padding top of the horizontal layout at index " + j + " to " + horizontalLayoutComponentCache[j].PaddingTop.Value);
-                            }
-                        }
-                    }
-                }
-
-                // Iterate over horizontalLayoutComponentCache and correct the padding top values
-                for (int j = 0; j < horizontalLayoutComponentCache.Length; j++)
-                { 
-                    if (forceRefreshedFrameFromMMF || ( isIdenticalRow[j] != 1 && horizontalLayoutComponentCache[j].PaddingTop.Value != j))
-                    {
-                        float oldPaddingTop = horizontalLayoutComponentCache[j].PaddingTop.Value;
-                        horizontalLayoutComponentCache[j].PaddingTop.Value = j;
-                        //Msg("Reset the padding top of the horizontal layout at index " + j + " from " + oldPaddingTop + " to " + horizontalLayoutComponentCache[j].PaddingTop.Value);
-                    }
-                }
-
-                //Msg(logBuilder);
-                // We've finished rendering the frame, so write the latestReceivedFrameMillisecondsOffset to the MMF
                 WriteLatestReceivedFrameMillisecondsOffsetToMemoryMappedFile();
             }
 
@@ -335,44 +287,6 @@ namespace ResoniteNESMod
 
                     readPixelDataLength = _pixelDataBinaryReader.ReadInt32();
 
-                    // Read the pairs of 16-bit integers (identicalRowRanges)
-                    identicalRowRangesFromMMF.Clear();
-
-                    if (_pixelDataBinaryReader.ReadInt16() < 0)
-                    {
-                        // If the first 16-bit int is negative, that indicates that there are no identicalRowRanges
-                    }
-                    else
-                    {
-                        _memoryMappedViewStream.Position -= sizeof(short); // Rewind the stream by 2 bytes, so we don't have to store the 1st 16 bit int
-                        while (true)
-                        {
-                            short endIndex = _pixelDataBinaryReader.ReadInt16();
-
-
-                            if (endIndex > 999)
-                            { 
-                                // Something went wrong. This usually happens when I'm alt-tabbing.
-                                // I'm not sure why this happens, but I'm guessing it's because the MMF is not being updated.
-                                // Raise an exception so we read from the MMF again.
-                                throw new Exception("endIndex > 999");
-                            }
-
-                            short span = _pixelDataBinaryReader.ReadInt16();
-
-                            if (span < 0)  // Negative span indicates the end of the range list
-                            {
-                                span = (short)-span;  // Convert span back to positive
-                                identicalRowRangesFromMMF.Add((endIndex, span));
-                                break;
-                            }
-                            else
-                            {
-                                identicalRowRangesFromMMF.Add((endIndex, span));
-                            }
-                        }
-                    }
-
                     // Now read the pixel data, based on readPixelDataLength
                     for (int i = 0; i < readPixelDataLength; i++)
                     {
@@ -405,38 +319,6 @@ namespace ResoniteNESMod
                         ReadFromMemoryMappedFile();
                         // This can happen if ReadFromMemoryMappedFile() raised an exception
                         if (readPixelDataLength == -1) return;
-
-                        //Msg($"Identical Row Ranges from MMF: {string.Join("; ", identicalRowRangesFromMMF.Select(range => $"End Index: {range.EndIndex}, Span: {range.Span}"))}");
-
-                        isIdenticalRow = new int[Config.GetValue(CANVAS_SLOT_HEIGHT)];
-                        isIdentincalRowRangeEndIndex = new int[Config.GetValue(CANVAS_SLOT_HEIGHT)];
-                        identincalRowSpanByEndIndex = new int[Config.GetValue(CANVAS_SLOT_HEIGHT)];
-                        identicalRowIndices = new int[Config.GetValue(CANVAS_SLOT_HEIGHT)];                        
-                        identicalRowCount = 0;
-
-                        foreach (var range in identicalRowRangesFromMMF)
-                        {
-                            int startIndex = range.EndIndex - range.Span + 1;
-                            for (int i = startIndex; i <= range.EndIndex; i++)
-                            {
-                                isIdenticalRow[i] = 1;
-                                identicalRowIndices[identicalRowCount] = i;
-                                identicalRowCount++;
-                            }
-                            isIdentincalRowRangeEndIndex[range.EndIndex] = 1;
-                            identincalRowSpanByEndIndex[range.EndIndex] = range.Span;
-                        }
-
-
-                            /*
-                            Msg($"IsIdenticalRow: {string.Join("; ", isIdenticalRow)}");
-                            Msg($"IsIdentincalRowRangeEndIndex: {string.Join("; ", isIdentincalRowRangeEndIndex)}");
-                            Msg($"identincalRowSpanByEndIndex: {string.Join("; ", identincalRowSpanByEndIndex)}");
-                            Msg($"identicalRowIndices: {string.Join("; ", identicalRowIndices)}");
-                            Msg($"identicalRowCount: {identicalRowCount}");
-                            Msg ($"readPixelDataLength: {readPixelDataLength}");
-                            Msg($"Length of readPixelData array: {readPixelData.Length}");
-                            */
                         return;
                     }
 
