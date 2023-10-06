@@ -63,7 +63,8 @@ namespace ResoniteNESMod
             private static MemoryMappedViewStream _memoryMappedViewStream;
             private static BinaryReader _binaryReader;
             private static Dictionary<int, colorX> colorCache = new Dictionary<int, colorX>();
-            private static List<(short EndIndex, short Span)> identicalRowRangesFromMMF;
+            private static List<(short EndIndex, short Span)> identicalRowRangesFromMMF = new List<(short, short)>();
+            private static int[] identincalRowIndices;
 
 
             static void Postfix(Canvas __instance)
@@ -244,7 +245,7 @@ namespace ResoniteNESMod
                     readPixelDataLength = _binaryReader.ReadInt32();
 
                     // Read the pairs of 16-bit integers (identicalRowRanges)
-                    identicalRowRangesFromMMF = new List<(short, short)>();
+                    identicalRowRangesFromMMF.Clear();
 
                     if (_binaryReader.ReadInt16() < 0)
                     {
@@ -256,6 +257,16 @@ namespace ResoniteNESMod
                         while (true)
                         {
                             short endIndex = _binaryReader.ReadInt16();
+
+
+                            if (endIndex > 999)
+                            { 
+                                // Something went wrong. This usually happens when I'm alt-tabbing.
+                                // I'm not sure why this happens, but I'm guessing it's because the MMF is not being updated.
+                                // Raise an exception so we read from the MMF again.
+                                throw new Exception("endIndex > 999");
+                            }
+
                             short span = _binaryReader.ReadInt16();
 
                             if (span < 0)  // Negative span indicates the end of the range list
@@ -281,7 +292,7 @@ namespace ResoniteNESMod
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("Error reading from MemoryMappedFile: " + ex.Message);
+                    Error("Error reading from MemoryMappedFile: " + ex.Message);
                     readPixelDataLength = -1;
                     _memoryMappedViewStream.Position = 0;
                 }
@@ -300,6 +311,20 @@ namespace ResoniteNESMod
                     {
                         ReadFromMemoryMappedFile();
                         Msg($"Identical Row Ranges from MMF: {string.Join("; ", identicalRowRangesFromMMF.Select(range => $"End Index: {range.EndIndex}, Span: {range.Span}"))}");
+
+                        identincalRowIndices = new int[Config.GetValue(CANVAS_SLOT_HEIGHT)];
+
+                        foreach (var range in identicalRowRangesFromMMF)
+                        {
+                            int startIndex = range.EndIndex - range.Span + 1;
+                            for (int i = startIndex; i <= range.EndIndex; i++)
+                            {
+                                identincalRowIndices[i] = 1;
+                            }
+                        }
+
+                        // Print identincalRowIndices
+                        Msg($"identincalRowIndices: {string.Join("; ", identincalRowIndices)}");
 
                         return;
                     }

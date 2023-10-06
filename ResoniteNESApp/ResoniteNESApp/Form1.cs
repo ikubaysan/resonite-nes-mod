@@ -64,7 +64,7 @@ namespace ResoniteNESApp
         private static BinaryReader _binaryReader = null;
         private List<(int Start, int End)> previousIdenticalRowRanges = new List<(int Start, int End)>();
         private List<(int Start, int End)> identicalRowRanges;
-        private List<(short EndIndex, short Span)> identicalRowRangesFromMMF;
+        private static List<(short EndIndex, short Span)> identicalRowRangesFromMMF = new List<(short, short)>();
         private Dictionary<int, List<int>> rgbToSpans; // Map RGB values to spans
         private int[] pixelData;
 
@@ -514,7 +514,7 @@ namespace ResoniteNESApp
                 readPixelDataLength = _binaryReader.ReadInt32();
 
                 // Read the pairs of 16-bit integers (identicalRowRanges)
-                identicalRowRangesFromMMF = new List<(short, short)>();
+                identicalRowRangesFromMMF.Clear();
 
                 if (_binaryReader.ReadInt16() < 0)  
                 {
