@@ -381,7 +381,7 @@ namespace ResoniteNESApp
             if (rowsPreviouslyInContiguousRange.Count > 0)
             { 
                 Console.WriteLine(rowsPreviouslyInContiguousRange.Count + " rows to force refresh.");
-                forceFullFrame = true;
+                //forceFullFrame = true;
             }
 
             // Second loop for processing pixel data
@@ -438,7 +438,27 @@ namespace ResoniteNESApp
         }
 
 
-        public void UpdateRowHeight(int rowIndex, int rowHeight)
+
+        public int GetRowHeight(int rowIndex)
+        {
+            if (rowIndex < 0 || rowIndex >= FRAME_HEIGHT)
+            {
+                Console.WriteLine("Invalid row index.");
+                return -1;
+            }
+
+            if (rowExpansionAmounts.ContainsKey(rowIndex))
+            {
+                return rowExpansionAmounts[rowIndex];
+            }
+            else
+            {
+                return 1;
+            }
+        }
+
+
+        public void SetRowHeight(int rowIndex, int rowHeight)
         {
             if (rowIndex < 0 || rowHeight < 1)
             {
@@ -450,15 +470,18 @@ namespace ResoniteNESApp
         }
 
 
-        private void SetRowHeight(Bitmap bitmap, int rowIndex, int rowHeight)
+        private void ApplyRowHeight(Bitmap bitmap, int rowIndex, int rowHeight)
         {
+
+
+
             if (rowIndex < 0 || rowIndex >= bitmap.Height)
             {
                 Console.WriteLine("Row index out of bounds.");
                 return;
             }
 
-            if (rowHeight < 1 || bitmap.Height - rowIndex - rowHeight >= 0)
+            if (rowHeight < 1 || rowIndex - rowHeight < -1)
             {
                 Console.WriteLine("Invalid row height or not enough rows below to set.");
                 return;
@@ -466,14 +489,17 @@ namespace ResoniteNESApp
 
             // Expand the row upwards based on its height.
             // Greater rowIndex means lower on the screen.
-            for (int y = rowIndex; y >= rowIndex - rowHeight; y--)
+            List<int> updatedRows = new List<int>();
+            for (int y = rowIndex; y > rowIndex - rowHeight; y--)
             {
                 for (int x = 0; x < bitmap.Width; x++)
                 {
                     Color pixelColor = bitmap.GetPixel(x, rowIndex);
                     bitmap.SetPixel(x, y, pixelColor);
                 }
+                updatedRows.Add(y);
             }
+            return;
         }
 
         // Convert pixel data into a Bitmap
@@ -491,12 +517,11 @@ namespace ResoniteNESApp
                     int packedxStartYSpan = readPixelData[i++];
                     UnpackXYZ(packedxStartYSpan, out int xStart, out int y, out int spanLength);
 
-                    /*
+                    
                     if (isIdenticalRow[y] == 1 && !forceRefreshedFrameFromMMF)
                     {
                         if (isIdentincalRowRangeEndIndex[y] != 1) continue;
                     }
-                    */
 
                     for (int x = xStart; x < xStart + spanLength; x++)
                     {
@@ -507,6 +532,36 @@ namespace ResoniteNESApp
                 }
                 i++; // Skip the negative delimiter
             }
+
+
+
+
+            if (!forceRefreshedFrameFromMMF)
+            {
+                for (int j = 0; j < isIdentincalRowRangeEndIndex.Length; j++)
+                {
+                    if (isIdentincalRowRangeEndIndex[j] == 1)
+                    {
+                        int spanLength = identincalRowSpanByEndIndex[j];
+                        if (GetRowHeight(j) != spanLength)
+                        {
+                            SetRowHeight(j, spanLength);
+                            Console.WriteLine("Set the span of the row at index " + j + " to expanded span " + spanLength);
+                        }
+                    }
+                }
+            }
+
+            // Iterate over horizontalLayoutComponentCache and correct the padding top values
+            for (int j = 0; j < FRAME_HEIGHT; j++)
+            {
+                if (forceRefreshedFrameFromMMF || (isIdenticalRow[j] != 1 && GetRowHeight(j) != 1))
+                {
+                    SetRowHeight(j, 1);
+                    Console.WriteLine("Reset the span of the row at index " + j + " to 1");
+                }
+            }
+
             Console.WriteLine(nPixelsChanged + " pixels changed since previous frame. pixelData len: " + readPixelDataLength);
 
 
@@ -516,7 +571,7 @@ namespace ResoniteNESApp
             // After setting all pixels, apply the row expansions
             foreach (var row in rowExpansionAmounts)
             {
-                SetRowHeight(_currentBitmap, row.Key, row.Value);
+                ApplyRowHeight(_currentBitmap, row.Key, row.Value);
             }
 
             return _currentBitmap;
