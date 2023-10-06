@@ -257,12 +257,22 @@ namespace ResoniteNESApp
             List<int> pixelDataList = new List<int>();
             var rgbToSpans = new Dictionary<int, List<int>>(); // Map RGB values to spans
 
+            List<Color> previousRowPixels = new List<Color>();
+            List<Color> currentRowPixels = new List<Color>();
+
+            List<(int Start, int End)> identicalRowRanges = new List<(int Start, int End)>();
+            int? startIdenticalRowIndex = null;
+
             for (int y = 0; y < height; y++)
             {
+                currentRowPixels.Clear();
+
                 int x = 0;
                 while (x < width)
                 {
                     Color pixel = bmp.GetPixel(x, y);
+                    currentRowPixels.Add(pixel);
+
                     Color currentPixel = _currentBitmap.GetPixel(x, y);
 
                     if (forceFullFrame || !currentPixel.Equals(pixel))
@@ -290,6 +300,29 @@ namespace ResoniteNESApp
                         x++;
                     }
                 }
+
+                if (currentRowPixels.SequenceEqual(previousRowPixels))
+                {
+                    if (!startIdenticalRowIndex.HasValue)
+                    {
+                        startIdenticalRowIndex = y - 1; // Start from the previous row
+                    }
+                }
+                else if (startIdenticalRowIndex.HasValue)
+                {
+                    identicalRowRanges.Add((startIdenticalRowIndex.Value, y - 1));
+                    startIdenticalRowIndex = null;
+                }
+
+                // Swap the lists instead of copying for efficiency
+                var temp = previousRowPixels;
+                previousRowPixels = currentRowPixels;
+                currentRowPixels = temp;
+            }
+
+            if (startIdenticalRowIndex.HasValue)
+            {
+                identicalRowRanges.Add((startIdenticalRowIndex.Value, height - 1));
             }
 
             // Now, compile the pixel data in the new format
@@ -301,8 +334,23 @@ namespace ResoniteNESApp
             }
 
             bmp.Dispose();
+
+            // Print the ranges of contiguous identical rows
+            int totalCount = 0;
+            foreach (var range in identicalRowRanges)
+            {
+                totalCount += (range.End - range.Start + 1);
+            }
+            Console.Write(totalCount + " contiguous identical rows in ranges: ");
+            foreach (var range in identicalRowRanges)
+            {
+                Console.Write("[" + range.Start + "-" + range.End + "] ");
+            }
+            Console.Write("\n");
+
             return pixelDataList.ToArray();
         }
+
 
 
 
