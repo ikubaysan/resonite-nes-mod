@@ -199,8 +199,11 @@ namespace ResoniteNESMod
             static void SetPixelDataToCanvas(Canvas __instance)
             {
                 int i = 0;
-                int packedRGB;
                 float Rfloat, Gfloat, Bfloat;
+                int packedRGB;
+                float R, G, B;
+                int packedxStartYSpan, xStart, y, spanLength;
+                int x, xEnd;
                 colorX cachedColor;
 
                 while (i < readPixelDataLength)
@@ -210,26 +213,28 @@ namespace ResoniteNESMod
                     // Check if we already have this RGB value cached
                     if (!colorCache.TryGetValue(packedRGB, out cachedColor))
                     {
-                        UnpackXYZ(packedRGB, out int R, out int G, out int B); // Unpack RGB
-
                         // If not, create and cache it
-                        Rfloat = (float)R / 1000f;
-                        Gfloat = (float)G / 1000f;
-                        Bfloat = (float)B / 1000f;
-
-                        //cachedColor = new colorX(R + 0.01f, G + 0.01f, B + 0.01f, 1);
+                        Rfloat = (float)(((packedRGB / 1000000) % 1000) / 1000f);
+                        Gfloat = (float)(((packedRGB / 1000) % 1000) / 1000f);
+                        Bfloat = (float)((packedRGB % 1000) / 1000f);
                         cachedColor = new colorX(Rfloat, Gfloat, Bfloat, 1, ColorProfile.Linear);
                         colorCache[packedRGB] = cachedColor;
                     }
 
                     while (i < readPixelDataLength && readPixelData[i] >= 0)
                     {
-                        int packedxStartYSpan = readPixelData[i++];
-                        UnpackXYZ(packedxStartYSpan, out int xStart, out int y, out int spanLength);
-                        for (int x = xStart; x < xStart + spanLength; x++)
+                        packedxStartYSpan = readPixelData[i++];
+                        xStart = (packedxStartYSpan / 1000000) % 1000;
+                        y = (packedxStartYSpan / 1000) % 1000;
+
+                        //Same as: xEnd = xStart + spanLength;
+                        xEnd = ((packedxStartYSpan / 1000000) % 1000) + (packedxStartYSpan % 1000);
+
+                        for (x = xStart; x < xEnd; x++)
                         {
                             // For some reason, if I don't do this then I get artifacting.
-                            // And yes, I have to create a new colorX object every time.
+                            // And yes, I have to create a new colorX object for each pixel I change.
+                            // I've even tried making a colorX object and using the same one in this function, but it doesn't help much.
                             imageComponentCache[y][x].Tint.Value = new colorX(0, 0, 0, 1);
                             imageComponentCache[y][x].Tint.Value = cachedColor;
                         }
@@ -321,7 +326,6 @@ namespace ResoniteNESMod
                         if (readPixelDataLength == -1) return;
                         return;
                     }
-
                     try
                     {
                         SetPixelDataToCanvas(_latestCanvasInstance);
