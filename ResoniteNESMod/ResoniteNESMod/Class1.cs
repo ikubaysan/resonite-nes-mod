@@ -56,7 +56,6 @@ namespace ResoniteNESMod
             private static Canvas _latestCanvasInstance;
             private static MemoryMappedFile _memoryMappedFile;
             private const string MemoryMappedFileName = "ResonitePixelData";
-            private static int latestFrameMillisecondsOffset;
             private static Image[][] imageComponentCache;
             private static HorizontalLayout[] horizontalLayoutComponentCache;
             private static int[] readPixelData;
@@ -72,6 +71,10 @@ namespace ResoniteNESMod
             private static int identicalRowCount;
             private static bool forceRefreshedFrameFromMMF;
 
+            private const string ClientRenderConfirmationMemoryMappedFileName = "ResoniteClientRenderConfirmation";
+            private const int ClientRenderConfirmationMemoryMappedFileSize = sizeof(int);
+            private static MemoryMappedFile _clientRenderConfirmationMemoryMappedFile;
+            private static int latestReceivedFrameMillisecondsOffset = -1;
 
             static void Postfix(Canvas __instance)
             {
@@ -264,7 +267,24 @@ namespace ResoniteNESMod
                         Msg("Reset the padding top of the horizontal layout at index " + j + " to " + horizontalLayoutComponentCache[j].PaddingTop.Value);
                     }
                 }
+
+                // We've finished rendering the frame, so write the latestReceivedFrameMillisecondsOffset to the MMF
+                WriteLatestReceivedFrameMillisecondsOffsetToMemoryMappedFile();
             }
+
+            static void WriteLatestReceivedFrameMillisecondsOffsetToMemoryMappedFile()
+            {
+                if (_clientRenderConfirmationMemoryMappedFile == null)
+                {
+                    _clientRenderConfirmationMemoryMappedFile = MemoryMappedFile.CreateOrOpen(ClientRenderConfirmationMemoryMappedFileName, ClientRenderConfirmationMemoryMappedFileSize);
+                }
+                using (MemoryMappedViewStream stream = _clientRenderConfirmationMemoryMappedFile.CreateViewStream())
+                using (BinaryWriter writer = new BinaryWriter(stream))
+                {
+                    writer.Write(latestReceivedFrameMillisecondsOffset);
+                }
+            }
+
 
             static void ReadFromMemoryMappedFile()
             {
@@ -280,7 +300,7 @@ namespace ResoniteNESMod
                     }
 
                     int millisecondsOffset = _binaryReader.ReadInt32();
-                    if (millisecondsOffset == latestFrameMillisecondsOffset)
+                    if (millisecondsOffset == latestReceivedFrameMillisecondsOffset)
                     {
                         readPixelDataLength = -1;
                         return;
@@ -296,7 +316,7 @@ namespace ResoniteNESMod
                         forceRefreshedFrameFromMMF = false;
                     }
 
-                    latestFrameMillisecondsOffset = millisecondsOffset;
+                    latestReceivedFrameMillisecondsOffset = millisecondsOffset;
 
                     readPixelDataLength = _binaryReader.ReadInt32();
 
