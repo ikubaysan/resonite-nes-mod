@@ -53,7 +53,7 @@ namespace ResoniteNESApp
         private const int PixelDataMemoryMappedFileSize = (((FRAME_WIDTH * FRAME_HEIGHT * 2) + 1) * sizeof(int)) + (FRAME_HEIGHT * 2 * sizeof(short));
         private MemoryMappedFile _pixelDataMemoryMappedFile;
         private Bitmap _currentBitmap = new Bitmap(FRAME_WIDTH, FRAME_HEIGHT);
-        private const int FULL_FRAME_INTERVAL = 10 * 1000; // 10 seconds in milliseconds
+        private int fullFrameInterval = 10 * 1000; // 10 seconds in milliseconds
         private DateTime _lastFullFrameTime = DateTime.MinValue;
         private DateTime programStartTime;
         int[] readPixelData = new int[FRAME_WIDTH * FRAME_HEIGHT];
@@ -154,8 +154,11 @@ namespace ResoniteNESApp
 
             if (checkBox3.Checked && !(clientRenderConfirmed())) return;
 
+            if (int.TryParse(textBox6.Text, out int selectedFullFrameInterval) && selectedFullFrameInterval >= 1)
+                fullFrameInterval = selectedFullFrameInterval * 1000;
+
             bool forceFullFrame = false;
-            if ((DateTime.Now - _lastFullFrameTime).TotalMilliseconds >= FULL_FRAME_INTERVAL)
+            if ((DateTime.Now - _lastFullFrameTime).TotalMilliseconds >= fullFrameInterval)
             {
                 forceFullFrame = true;
                 _lastFullFrameTime = DateTime.Now;

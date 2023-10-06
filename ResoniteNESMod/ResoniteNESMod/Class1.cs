@@ -447,13 +447,7 @@ namespace ResoniteNESMod
                         readPixelDataLength = -1;
                         return;
                     }
-                    ConsecutiveSetPixelDataToCanvasCalls++;
-
-                    if (ConsecutiveSetPixelDataToCanvasCalls == 1)
-                    {
-                        ConsecutiveSetPixelDataToCanvasCalls = 0;
-                        readPixelDataLength = -1;
-                    }
+                    readPixelDataLength = -1;
                     return;
                 }
             }
