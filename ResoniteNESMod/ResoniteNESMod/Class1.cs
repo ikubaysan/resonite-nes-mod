@@ -426,8 +426,6 @@ namespace ResoniteNESMod
                             isIdentincalRowRangeEndIndex[range.EndIndex] = 1;
                             identincalRowSpanByEndIndex[range.EndIndex] = range.Span;
                         }
-
-
                             /*
                             Msg($"IsIdenticalRow: {string.Join("; ", isIdenticalRow)}");
                             Msg($"IsIdentincalRowRangeEndIndex: {string.Join("; ", isIdentincalRowRangeEndIndex)}");
