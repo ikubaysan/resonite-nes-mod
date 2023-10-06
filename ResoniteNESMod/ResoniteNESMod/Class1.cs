@@ -244,9 +244,10 @@ namespace ResoniteNESMod
 
                         for (int x = xStart; x < xStart + spanLength; x++)
                         {
+                            // For some reason, if I don't do this then I get artifacting.
+                            // And yes, I have to create a new colorX object every time.
                             imageComponentCache[y][x].Tint.Value = new colorX(0, 0, 0, 1);
                             imageComponentCache[y][x].Tint.Value = cachedColor;
-                            //logBuilder.AppendFormat("{0}, {1}{2}{3}; ", packedRGB, x, y, spanLength);
                         }
                     }
                     i++; // Skip the negative delimiter. We've hit a new color.
