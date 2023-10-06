@@ -213,7 +213,6 @@ namespace ResoniteNESMod
                 {
                     packedRGB = readPixelData[i++];
 
-                    /*
                     // Check if we already have this RGB value cached
                     if (!colorCache.TryGetValue(packedRGB, out cachedColor))
                     {
@@ -226,15 +225,6 @@ namespace ResoniteNESMod
                         cachedColor = new colorX(R, G, B, 1, ColorProfile.Linear);
                         colorCache[packedRGB] = cachedColor;
                     }
-                    */
-
-
-                    R = (float)Math.Round((((packedRGB / 1000000) % 1000) / 1000f), 2);
-                    G = (float)Math.Round((((packedRGB / 1000) % 1000) / 1000f), 2);
-                    B = (float)Math.Round((packedRGB % 1000) / 1000f, 2);
-                    cachedColor = new colorX(R, G, B, 1, ColorProfile.Linear);
-
-
 
                     while (i < readPixelDataLength && readPixelData[i] >= 0)
                     {
@@ -416,6 +406,7 @@ namespace ResoniteNESMod
                 public static void Postfix()
                 {
                     if (!initialized || _latestCanvasInstance == null) return;
+                    ReassignTints();
 
 
                     if (readPixelDataLength == -1 && Config.GetValue(ENABLED))
@@ -446,7 +437,6 @@ namespace ResoniteNESMod
                             identincalRowSpanByEndIndex[range.EndIndex] = range.Span;
                         }
 
-                        //ReassignTints();
 
                             /*
                             Msg($"IsIdenticalRow: {string.Join("; ", isIdenticalRow)}");
