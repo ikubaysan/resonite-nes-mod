@@ -37,6 +37,7 @@
             this.label1 = new System.Windows.Forms.Label();
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.tabPage1 = new System.Windows.Forms.TabPage();
+            this.checkBox4 = new System.Windows.Forms.CheckBox();
             this.checkBox3 = new System.Windows.Forms.CheckBox();
             this.label7 = new System.Windows.Forms.Label();
             this.textBox5 = new System.Windows.Forms.TextBox();
@@ -51,7 +52,6 @@
             this.checkBox1 = new System.Windows.Forms.CheckBox();
             this.label2 = new System.Windows.Forms.Label();
             this.tabPage2 = new System.Windows.Forms.TabPage();
-            this.checkBox4 = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             this.tabControl1.SuspendLayout();
             this.tabPage1.SuspendLayout();
@@ -141,6 +141,16 @@
             this.tabPage1.Text = "tabPage1";
             this.tabPage1.UseVisualStyleBackColor = true;
             // 
+            // checkBox4
+            // 
+            this.checkBox4.AutoSize = true;
+            this.checkBox4.Location = new System.Drawing.Point(241, 220);
+            this.checkBox4.Name = "checkBox4";
+            this.checkBox4.Size = new System.Drawing.Size(156, 30);
+            this.checkBox4.TabIndex = 18;
+            this.checkBox4.Text = "Confirm Render from Server\r\n(for testing)";
+            this.checkBox4.UseVisualStyleBackColor = true;
+            // 
             // checkBox3
             // 
             this.checkBox3.AutoSize = true;
@@ -171,11 +181,11 @@
             // label6
             // 
             this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(293, 338);
+            this.label6.Location = new System.Drawing.Point(262, 337);
             this.label6.Name = "label6";
-            this.label6.Size = new System.Drawing.Size(54, 13);
+            this.label6.Size = new System.Drawing.Size(88, 13);
             this.label6.TabIndex = 14;
-            this.label6.Text = "Framerate";
+            this.label6.Text = "Target Framerate";
             // 
             // textBox4
             // 
@@ -269,16 +279,6 @@
             this.tabPage2.TabIndex = 1;
             this.tabPage2.Text = "tabPage2";
             this.tabPage2.UseVisualStyleBackColor = true;
-            // 
-            // checkBox4
-            // 
-            this.checkBox4.AutoSize = true;
-            this.checkBox4.Location = new System.Drawing.Point(241, 220);
-            this.checkBox4.Name = "checkBox4";
-            this.checkBox4.Size = new System.Drawing.Size(156, 30);
-            this.checkBox4.TabIndex = 18;
-            this.checkBox4.Text = "Confirm Render from Server\r\n(for testing)";
-            this.checkBox4.UseVisualStyleBackColor = true;
             // 
             // Form1
             // 

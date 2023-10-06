@@ -75,6 +75,7 @@ namespace ResoniteNESMod
             private const int ClientRenderConfirmationMemoryMappedFileSize = sizeof(int);
             private static MemoryMappedFile _clientRenderConfirmationMemoryMappedFile;
             private static int latestReceivedFrameMillisecondsOffset = -1;
+            private static DateTime latestInitializationAttempt = DateTime.MinValue;
 
             static void Postfix(Canvas __instance)
             {
@@ -85,7 +86,9 @@ namespace ResoniteNESMod
 
                 if (!initialized)
                 {
+                    if ((DateTime.UtcNow - latestInitializationAttempt).TotalSeconds < 10) return;
                     Msg("Canvas must be initialized");
+                    
                     try
                     { 
                         InitializeCanvas(__instance);
@@ -142,6 +145,15 @@ namespace ResoniteNESMod
 
                 Msg("Found the child slot: " + contentSlot.Name);
 
+                // Destroying all the children is expensive, and usually if we get to this point then the next thing that could go wrong
+                // is not being able to find the memory mapped file, so we'll attempt to find the memory mapped file first.
+                readPixelData = new int[Config.GetValue(CANVAS_SLOT_WIDTH) * Config.GetValue(CANVAS_SLOT_HEIGHT)];
+                _memoryMappedFile = MemoryMappedFile.OpenExisting(MemoryMappedFileName);
+                _memoryMappedViewStream = _memoryMappedFile.CreateViewStream();
+                _binaryReader = new BinaryReader(_memoryMappedViewStream);
+                latestReceivedFrameMillisecondsOffset = -1;
+                Msg("_memoryMappedFile has been newly initialized with " + MemoryMappedFileName);
+
                 // Delete all existing children of the content slot, which are HorizontalLayouts
                 contentSlot.DestroyChildren();
 
@@ -183,11 +195,6 @@ namespace ResoniteNESMod
                     }
                 }
                 Msg("Created new HorizontalLayouts according to the height constant: " + canvasSlotHeight);
-                readPixelData = new int[Config.GetValue(CANVAS_SLOT_WIDTH) * Config.GetValue(CANVAS_SLOT_HEIGHT)];
-                _memoryMappedFile = MemoryMappedFile.OpenExisting(MemoryMappedFileName);
-                _memoryMappedViewStream = _memoryMappedFile.CreateViewStream();
-                _binaryReader = new BinaryReader(_memoryMappedViewStream);
-                Msg("_memoryMappedFile has been newly initialized with " + MemoryMappedFileName);
             }
 
 

@@ -127,7 +127,7 @@ namespace ResoniteNESApp
                         using (BinaryReader reader = new BinaryReader(stream))
                         {
                             int value = reader.ReadInt32();
-                            return value == latestPublishedFrameMillisecondsOffset;
+                            return value == latestPublishedFrameMillisecondsOffset || value == -1;
                         }
                     }
                 }
