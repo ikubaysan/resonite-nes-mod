@@ -77,6 +77,7 @@ namespace ResoniteNESMod
             private static int latestReceivedFrameMillisecondsOffset = -1;
             private static DateTime latestInitializationAttempt = DateTime.MinValue;
             private static int ConsecutiveSetPixelDataToCanvasCalls = 0;
+            private static colorX[][] colorXArray;
 
             static void Postfix(Canvas __instance)
             {
@@ -166,6 +167,7 @@ namespace ResoniteNESMod
                 // Initialize the cache
                 imageComponentCache = new Image[canvasSlotHeight][];
                 horizontalLayoutComponentCache = new HorizontalLayout[canvasSlotHeight];
+                colorXArray = new colorX[canvasSlotHeight][];
 
                 // For the count of the height constant, call contentSlot.AddSlot
                 for (int i = 0; i < canvasSlotHeight; i++)
@@ -176,6 +178,7 @@ namespace ResoniteNESMod
                     horizontalLayoutComponentCache[i] = horizontalLayoutComponent;
                     horizontalLayoutComponent.PaddingTop.Value = i;
                     horizontalLayoutComponent.PaddingBottom.Value = canvasSlotHeight - i - 1;
+                    colorXArray[i] = new colorX[canvasSlotWidth];
 
                     // Create new slots for each column in the horizontal layout and add them to the cache
                     imageComponentCache[i] = new Image[canvasSlotWidth];
@@ -188,11 +191,9 @@ namespace ResoniteNESMod
                         Image imageComponent = verticalSlot.AttachComponent<Image>();
                         imageComponentCache[i][j] = imageComponent;
                         // Set the tint to a random color
-                        imageComponent.Tint.Value = new colorX(
-                            (float)rand.NextDouble(),
-                            (float)rand.NextDouble(),
-                            (float)rand.NextDouble(),
-                            1);
+                        colorX randomColor = new colorX((float)rand.NextDouble(), (float)rand.NextDouble(), (float)rand.NextDouble(), 1);
+                        imageComponent.Tint.Value = randomColor;
+                        colorXArray[i][j] = randomColor;
                     }
                 }
                 Msg("Created new HorizontalLayouts according to the height constant: " + canvasSlotHeight);
@@ -212,6 +213,7 @@ namespace ResoniteNESMod
                 {
                     packedRGB = readPixelData[i++];
 
+                    /*
                     // Check if we already have this RGB value cached
                     if (!colorCache.TryGetValue(packedRGB, out cachedColor))
                     {
@@ -224,6 +226,15 @@ namespace ResoniteNESMod
                         cachedColor = new colorX(R, G, B, 1, ColorProfile.Linear);
                         colorCache[packedRGB] = cachedColor;
                     }
+                    */
+
+
+                    R = (float)Math.Round((((packedRGB / 1000000) % 1000) / 1000f), 2);
+                    G = (float)Math.Round((((packedRGB / 1000) % 1000) / 1000f), 2);
+                    B = (float)Math.Round((packedRGB % 1000) / 1000f, 2);
+                    cachedColor = new colorX(R, G, B, 1, ColorProfile.Linear);
+
+
 
                     while (i < readPixelDataLength && readPixelData[i] >= 0)
                     {
@@ -244,6 +255,7 @@ namespace ResoniteNESMod
                         for (x = xStart; x < xEnd; x++)
                         {
                             imageComponentCache[y][x].Tint.Value = cachedColor;
+                            colorXArray[y][x] = cachedColor;
                         }
                     }
                     i++; // Skip the negative delimiter. We've hit a new color.
@@ -385,6 +397,18 @@ namespace ResoniteNESMod
                 }
             }
 
+            static void ReassignTints()
+            {
+                for (int i = 0; i < colorXArray.Length; i++)
+                {
+                    for (int j = 0; j < colorXArray[i].Length; j++)
+                    {
+                        imageComponentCache[i][j].Tint.Value = colorXArray[i][j];
+                    }
+                }
+                Msg("Reassigned tints");
+            }
+
 
             [HarmonyPatch(typeof(FrooxEngine.Animator), "OnCommonUpdate")]
             public static class AnimatorOnCommonUpdatePatcher
@@ -421,7 +445,9 @@ namespace ResoniteNESMod
                             isIdentincalRowRangeEndIndex[range.EndIndex] = 1;
                             identincalRowSpanByEndIndex[range.EndIndex] = range.Span;
                         }
-                            
+
+                        //ReassignTints();
+
                             /*
                             Msg($"IsIdenticalRow: {string.Join("; ", isIdenticalRow)}");
                             Msg($"IsIdentincalRowRangeEndIndex: {string.Join("; ", isIdentincalRowRangeEndIndex)}");
