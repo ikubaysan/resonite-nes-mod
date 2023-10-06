@@ -322,13 +322,12 @@ namespace ResoniteNESMod
             [HarmonyPatch(typeof(FrooxEngine.Animator), "OnCommonUpdate")]
             public static class AnimatorOnCommonUpdatePatcher
             {
-                public static void Postfix()
+                public static void Prefix()
                 {
                     if (!initialized || _latestCanvasInstance == null) return;
 
                     if (readPixelDataLength == -1 && Config.GetValue(ENABLED))
                     {
-
                         ReadFromMemoryMappedFile();
                         // This can happen if ReadFromMemoryMappedFile() raised an exception
                         if (readPixelDataLength == -1) return;
