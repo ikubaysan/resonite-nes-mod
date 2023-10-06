@@ -70,6 +70,7 @@ namespace ResoniteNESMod
             private static int[] identincalRowSpanByEndIndex;
             private static int[] identicalRowIndices;
             private static int identicalRowCount;
+            private static bool forceRefreshedFrameFromMMF;
 
 
             static void Postfix(Canvas __instance)
@@ -223,7 +224,7 @@ namespace ResoniteNESMod
                         y = (packedXYZ / 1000) % 1000;
 
 
-                        if (isIdenticalRow[y] == 1 && 1 == 2)
+                        if (isIdenticalRow[y] == 1 && !forceRefreshedFrameFromMMF)
                         {
                             if (isIdentincalRowRangeEndIndex[y] != 1) continue;
                         }
@@ -240,18 +241,20 @@ namespace ResoniteNESMod
                     i++; // Skip the negative delimiter. We've hit a new color.
                 }
 
-
-                for (int j = 0; j < isIdentincalRowRangeEndIndex.Length; j++)
+                if (!forceRefreshedFrameFromMMF)
                 {
-                    if (isIdentincalRowRangeEndIndex[j] == 1 && 1 == 2)
+                    for (int j = 0; j < isIdentincalRowRangeEndIndex.Length; j++)
                     {
-                        spanLength = identincalRowSpanByEndIndex[j];
-                        //int targetPaddingTop = j - spanLength - 1;
-                        int targetPaddingTop = j - spanLength;
-                        if (horizontalLayoutComponentCache[j].PaddingTop.Value != targetPaddingTop)
+                        if (isIdentincalRowRangeEndIndex[j] == 1)
                         {
-                            horizontalLayoutComponentCache[j].PaddingTop.Value = targetPaddingTop;
-                            Msg("Set the padding top of the horizontal layout at index " + j + " to " + horizontalLayoutComponentCache[j].PaddingTop.Value);
+                            spanLength = identincalRowSpanByEndIndex[j];
+                            //int targetPaddingTop = j - spanLength - 1;
+                            int targetPaddingTop = j - spanLength;
+                            if (horizontalLayoutComponentCache[j].PaddingTop.Value != targetPaddingTop)
+                            {
+                                horizontalLayoutComponentCache[j].PaddingTop.Value = targetPaddingTop;
+                                Msg("Set the padding top of the horizontal layout at index " + j + " to " + horizontalLayoutComponentCache[j].PaddingTop.Value);
+                            }
                         }
                     }
                 }
@@ -259,7 +262,7 @@ namespace ResoniteNESMod
                 // Iterate over horizontalLayoutComponentCache and correct the padding top values
                 for (int j = 0; j < horizontalLayoutComponentCache.Length; j++)
                 { 
-                    if (isIdenticalRow[j] != 1 && horizontalLayoutComponentCache[j].PaddingTop.Value != j)
+                    if (forceRefreshedFrameFromMMF || ( isIdenticalRow[j] != 1 && horizontalLayoutComponentCache[j].PaddingTop.Value != j))
                     {
                         horizontalLayoutComponentCache[j].PaddingTop.Value = j;
                         Msg("Reset the padding top of the horizontal layout at index " + j + " to " + horizontalLayoutComponentCache[j].PaddingTop.Value);
@@ -286,6 +289,17 @@ namespace ResoniteNESMod
                         readPixelDataLength = -1;
                         return;
                     }
+
+                    if (millisecondsOffset < 0)
+                    {
+                        // If the 1st 32-bit int is negative, that indicates that the frame is force refreshed
+                        forceRefreshedFrameFromMMF = true;
+                    }
+                    else
+                    {
+                        forceRefreshedFrameFromMMF = false;
+                    }
+
                     latestFrameMillisecondsOffset = millisecondsOffset;
 
                     readPixelDataLength = _binaryReader.ReadInt32();

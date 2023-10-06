@@ -65,6 +65,7 @@ namespace ResoniteNESApp
         private List<(int Start, int End)> previousIdenticalRowRanges = new List<(int Start, int End)>();
         private List<(int Start, int End)> identicalRowRanges;
         private static List<(short EndIndex, short Span)> identicalRowRangesFromMMF = new List<(short, short)>();
+        private bool forceRefreshedFrameFromMMF;
         private Dictionary<int, List<int>> rgbToSpans; // Map RGB values to spans
         private int[] pixelData;
 
@@ -107,7 +108,7 @@ namespace ResoniteNESApp
             if (pixelData == null) return;
 
             // Write to MemoryMappedFile
-            WriteToMemoryMappedFile(pixelData);
+            WriteToMemoryMappedFile(pixelData, forceFullFrame);
 
             // Read from MemoryMappedFile
 
@@ -330,6 +331,7 @@ namespace ResoniteNESApp
                 }
             }
 
+            /*
             // Print the ranges of contiguous identical rows
             int totalCount = 0;
             foreach (var range in identicalRowRanges)
@@ -337,7 +339,6 @@ namespace ResoniteNESApp
                 totalCount += (range.End - range.Start + 1);
             }
             
-            /*
             Console.Write(totalCount + " contiguous identical rows in ranges: ");
             foreach (var range in identicalRowRanges)
             {
@@ -429,7 +430,7 @@ namespace ResoniteNESApp
             return _currentBitmap;
         }
 
-        private void WriteToMemoryMappedFile(int[] pixelData)
+        private void WriteToMemoryMappedFile(int[] pixelData, bool forceRefreshedFrame)
         {
             try
             {
@@ -444,7 +445,14 @@ namespace ResoniteNESApp
                 using (MemoryMappedViewStream stream = _memoryMappedFile.CreateViewStream())
                 using (BinaryWriter writer = new BinaryWriter(stream))
                 {
-                    writer.Write((Int32)DateTime.UtcNow.Millisecond);
+                    
+                    // We use the sign of the 1st 32-bit integer to indicate whether the frame is force refreshed or not, and also as a way to give the reader a way to know if the frame has changed.
+                    Int32 millisecondsOffset = DateTime.UtcNow.Millisecond;
+                    if (forceRefreshedFrame)
+                        writer.Write(-millisecondsOffset);
+                    else
+                        writer.Write(millisecondsOffset);
+
                     writer.Write((Int32)pixelData.Length); // The amount of integers that are currently relevant
 
                     if (identicalRowRanges.Count == 0)
@@ -509,6 +517,17 @@ namespace ResoniteNESApp
                     readPixelDataLength = -1;
                     return;
                 }
+
+                if (millisecondsOffset < 0)
+                {
+                    // If the 1st 32-bit int is negative, that indicates that the frame is force refreshed
+                    forceRefreshedFrameFromMMF = true;
+                }
+                else
+                {
+                    forceRefreshedFrameFromMMF = false;
+                }
+
                 latestFrameMillisecondsOffset = millisecondsOffset;
 
                 readPixelDataLength = _binaryReader.ReadInt32();
