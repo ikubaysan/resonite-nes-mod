@@ -223,7 +223,7 @@ namespace ResoniteNESMod
                         y = (packedXYZ / 1000) % 1000;
 
 
-                        if (isIdenticalRow[y] == 1)
+                        if (isIdenticalRow[y] == 1 && 1 == 2)
                         {
                             if (isIdentincalRowRangeEndIndex[y] != 1) continue;
                         }
@@ -243,9 +243,10 @@ namespace ResoniteNESMod
 
                 for (int j = 0; j < isIdentincalRowRangeEndIndex.Length; j++)
                 {
-                    if (isIdentincalRowRangeEndIndex[j] == 1)
+                    if (isIdentincalRowRangeEndIndex[j] == 1 && 1 == 2)
                     {
                         spanLength = identincalRowSpanByEndIndex[j];
+                        //int targetPaddingTop = j - spanLength - 1;
                         int targetPaddingTop = j - spanLength;
                         if (horizontalLayoutComponentCache[j].PaddingTop.Value != targetPaddingTop)
                         {
@@ -270,6 +271,8 @@ namespace ResoniteNESMod
             {
                 try
                 {
+                    _memoryMappedViewStream.Position = 0;
+
                     if (_binaryReader == null)
                     {
                         Console.WriteLine("Binary reader not initialized");
@@ -336,6 +339,8 @@ namespace ResoniteNESMod
                 catch (Exception ex)
                 {
                     Error("Error reading from MemoryMappedFile: " + ex.Message);
+                    Msg($"readPixelDataLength: {readPixelDataLength}");
+                    Msg($"Length of readPixelData array: {readPixelData.Length}");
                     readPixelDataLength = -1;
                     _memoryMappedViewStream.Position = 0;
                 }
@@ -378,13 +383,13 @@ namespace ResoniteNESMod
                             identincalRowSpanByEndIndex[range.EndIndex] = range.Span;
                         }
 
-                        // Print identincalRowIndices
-                        Msg($"IsIdenticalRow: {string.Join("; ", isIdenticalRow)}");
-                        Msg($"IsIdentincalRowRangeEndIndex: {string.Join("; ", isIdentincalRowRangeEndIndex)}");
-                        Msg($"identincalRowSpanByEndIndex: {string.Join("; ", identincalRowSpanByEndIndex)}");
-                        Msg($"identicalRowIndices: {string.Join("; ", identicalRowIndices)}");
-                        Msg($"identicalRowCount: {identicalRowCount}");
-
+                            Msg($"IsIdenticalRow: {string.Join("; ", isIdenticalRow)}");
+                            Msg($"IsIdentincalRowRangeEndIndex: {string.Join("; ", isIdentincalRowRangeEndIndex)}");
+                            Msg($"identincalRowSpanByEndIndex: {string.Join("; ", identincalRowSpanByEndIndex)}");
+                            Msg($"identicalRowIndices: {string.Join("; ", identicalRowIndices)}");
+                            Msg($"identicalRowCount: {identicalRowCount}");
+                            //Msg ($"readPixelDataLength: {readPixelDataLength}");
+                            //Msg($"Length of readPixelData array: {readPixelData.Length}");
                         return;
                     }
 
