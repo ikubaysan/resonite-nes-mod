@@ -58,17 +58,18 @@ namespace ResoniteNESMod
             private const string MemoryMappedFileName = "ResonitePixelData";
             private static int latestFrameMillisecondsOffset;
             private static Image[][] imageComponentCache;
+            private static HorizontalLayout[] horizontalLayoutComponentCache;
             private static int[] readPixelData;
             private static int readPixelDataLength = -1;
             private static MemoryMappedViewStream _memoryMappedViewStream;
             private static BinaryReader _binaryReader;
             private static Dictionary<int, colorX> colorCache = new Dictionary<int, colorX>();
             private static List<(short EndIndex, short Span)> identicalRowRangesFromMMF = new List<(short, short)>();
-            private static int[] IsIdenticalRow;
-            private static int[] IsIdentincalRowRangeEndIndex;
+            private static int[] isIdenticalRow;
+            private static int[] isIdentincalRowRangeEndIndex;
             private static int[] identincalRowSpanByEndIndex;
-
-
+            private static int[] identicalRowIndices;
+            private static int identicalRowCount;
 
 
             static void Postfix(Canvas __instance)
@@ -147,6 +148,7 @@ namespace ResoniteNESMod
 
                 // Initialize the cache
                 imageComponentCache = new Image[canvasSlotHeight][];
+                horizontalLayoutComponentCache = new HorizontalLayout[canvasSlotHeight];
 
                 // For the count of the height constant, call contentSlot.AddSlot
                 for (int i = 0; i < canvasSlotHeight; i++)
@@ -154,6 +156,7 @@ namespace ResoniteNESMod
                     Slot horizontalLayoutSlot = contentSlot.AddSlot("HorizontalLayout" + i);
                     horizontalLayoutSlot.AttachComponent<RectTransform>();
                     HorizontalLayout horizontalLayoutComponent = horizontalLayoutSlot.AttachComponent<HorizontalLayout>();
+                    horizontalLayoutComponentCache[i] = horizontalLayoutComponent;
                     horizontalLayoutComponent.PaddingTop.Value = i;
                     horizontalLayoutComponent.PaddingBottom.Value = canvasSlotHeight - i - 1;
 
@@ -193,6 +196,10 @@ namespace ResoniteNESMod
                 int x, xEnd;
                 colorX cachedColor;
 
+
+
+
+
                 while (i < readPixelDataLength)
                 {
                     packedRGB = readPixelData[i++];
@@ -215,6 +222,13 @@ namespace ResoniteNESMod
                         xStart = (packedXYZ / 1000000) % 1000;
                         y = (packedXYZ / 1000) % 1000;
 
+
+                        if (isIdenticalRow[y] == 1)
+                        {
+                            if (isIdentincalRowRangeEndIndex[y] != 1) continue;
+                        }
+
+
                         //Same as: xEnd = xStart + spanLength;
                         xEnd = ((packedXYZ / 1000000) % 1000) + (packedXYZ % 1000);
 
@@ -224,6 +238,31 @@ namespace ResoniteNESMod
                         }
                     }
                     i++; // Skip the negative delimiter. We've hit a new color.
+                }
+
+
+                for (int j = 0; j < isIdentincalRowRangeEndIndex.Length; j++)
+                {
+                    if (isIdentincalRowRangeEndIndex[j] == 1)
+                    {
+                        spanLength = identincalRowSpanByEndIndex[j];
+                        int targetPaddingTop = j - spanLength;
+                        if (horizontalLayoutComponentCache[j].PaddingTop.Value != targetPaddingTop)
+                        {
+                            horizontalLayoutComponentCache[j].PaddingTop.Value = targetPaddingTop;
+                            Msg("Set the padding top of the horizontal layout at index " + j + " to " + horizontalLayoutComponentCache[j].PaddingTop.Value);
+                        }
+                    }
+                }
+
+                // Iterate over horizontalLayoutComponentCache and correct the padding top values
+                for (int j = 0; j < horizontalLayoutComponentCache.Length; j++)
+                { 
+                    if (isIdenticalRow[j] != 1 && horizontalLayoutComponentCache[j].PaddingTop.Value != j)
+                    {
+                        horizontalLayoutComponentCache[j].PaddingTop.Value = j;
+                        Msg("Reset the padding top of the horizontal layout at index " + j + " to " + horizontalLayoutComponentCache[j].PaddingTop.Value);
+                    }
                 }
             }
 
@@ -320,25 +359,31 @@ namespace ResoniteNESMod
 
                         Msg($"Identical Row Ranges from MMF: {string.Join("; ", identicalRowRangesFromMMF.Select(range => $"End Index: {range.EndIndex}, Span: {range.Span}"))}");
 
-                        IsIdenticalRow = new int[Config.GetValue(CANVAS_SLOT_HEIGHT)];
-                        IsIdentincalRowRangeEndIndex = new int[Config.GetValue(CANVAS_SLOT_HEIGHT)];
+                        isIdenticalRow = new int[Config.GetValue(CANVAS_SLOT_HEIGHT)];
+                        isIdentincalRowRangeEndIndex = new int[Config.GetValue(CANVAS_SLOT_HEIGHT)];
                         identincalRowSpanByEndIndex = new int[Config.GetValue(CANVAS_SLOT_HEIGHT)];
+                        identicalRowIndices = new int[Config.GetValue(CANVAS_SLOT_HEIGHT)];                        
+                        identicalRowCount = 0;
 
                         foreach (var range in identicalRowRangesFromMMF)
                         {
                             int startIndex = range.EndIndex - range.Span + 1;
                             for (int i = startIndex; i <= range.EndIndex; i++)
                             {
-                                IsIdenticalRow[i] = 1;
+                                isIdenticalRow[i] = 1;
+                                identicalRowIndices[identicalRowCount] = i;
+                                identicalRowCount++;
                             }
-                            IsIdentincalRowRangeEndIndex[range.EndIndex] = 1;
+                            isIdentincalRowRangeEndIndex[range.EndIndex] = 1;
                             identincalRowSpanByEndIndex[range.EndIndex] = range.Span;
                         }
 
                         // Print identincalRowIndices
-                        Msg($"IsIdenticalRow: {string.Join("; ", IsIdenticalRow)}");
-                        Msg($"IsIdentincalRowRangeEndIndex: {string.Join("; ", IsIdentincalRowRangeEndIndex)}");
+                        Msg($"IsIdenticalRow: {string.Join("; ", isIdenticalRow)}");
+                        Msg($"IsIdentincalRowRangeEndIndex: {string.Join("; ", isIdentincalRowRangeEndIndex)}");
                         Msg($"identincalRowSpanByEndIndex: {string.Join("; ", identincalRowSpanByEndIndex)}");
+                        Msg($"identicalRowIndices: {string.Join("; ", identicalRowIndices)}");
+                        Msg($"identicalRowCount: {identicalRowCount}");
 
                         return;
                     }
