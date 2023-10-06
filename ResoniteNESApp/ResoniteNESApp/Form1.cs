@@ -341,7 +341,7 @@ namespace ResoniteNESApp
 
         private int[] GeneratePixelDataFromFCEUX(int width, int height, bool forceFullFrame)
         {
-            if (int.TryParse(textBox5.Text, out int selectedMinContiguousIdenticalRowSpan) && selectedMinContiguousIdenticalRowSpan > 1 && selectedMinContiguousIdenticalRowSpan < 10000)
+            if (int.TryParse(textBox5.Text, out int selectedMinContiguousIdenticalRowSpan) && selectedMinContiguousIdenticalRowSpan > 1)
                 minContiguousIdenticalRowSpan = selectedMinContiguousIdenticalRowSpan;
 
             Bitmap bmp = CaptureFCEUXWindow();
@@ -560,6 +560,8 @@ namespace ResoniteNESApp
         // Convert pixel data into a Bitmap
         private Bitmap SetPixelDataToBitmap(int width, int height)
         {
+            //StringBuilder logBuilder = new StringBuilder();
+            //logBuilder.AppendFormat("{0}, {1};", latestReceivedFrameMillisecondsOffset, readPixelDataLength);
             int i = 0;
             int nPixelsChanged = 0;
             while (i < readPixelDataLength)
@@ -583,6 +585,7 @@ namespace ResoniteNESApp
                         Color newPixelColor = Color.FromArgb(R, G, B);
                         _currentBitmap.SetPixel(x, y, newPixelColor);
                         nPixelsChanged++;
+                        //logBuilder.AppendFormat("{0}, {1}{2}{3}; ", packedRGB, x, y, spanLength);
                     }
                 }
                 i++; // Skip the negative delimiter
@@ -614,14 +617,14 @@ namespace ResoniteNESApp
                 }
             }
 
-            Console.WriteLine(nPixelsChanged + " pixels updated since previous frame. pixelData len: " + readPixelDataLength);
+            //Console.WriteLine(nPixelsChanged + " pixels updated since previous frame. pixelData len: " + readPixelDataLength);
 
             // After setting all pixels, apply the row expansions
             foreach (var row in rowExpansionAmounts)
             {
                 ApplyRowHeight(_currentBitmap, row.Key, row.Value);
             }
-
+            Console.WriteLine(logBuilder.ToString());
             return _currentBitmap;
         }
 
@@ -715,8 +718,14 @@ namespace ResoniteNESApp
                     return;
                 }
 
-                latestReceivedFrameMillisecondsOffset = _pixelDataBinaryReader.ReadInt32();
-                if (latestReceivedFrameMillisecondsOffset < 0)
+                int millisecondsOffset = _pixelDataBinaryReader.ReadInt32();
+                if (millisecondsOffset == latestReceivedFrameMillisecondsOffset)
+                {
+                    readPixelDataLength = -1;
+                    return;
+                }
+
+                if (millisecondsOffset < 0)
                 {
                     // If the 1st 32-bit int is negative, that indicates that the frame is force refreshed
                     forceRefreshedFrameFromMMF = true;
@@ -725,6 +734,8 @@ namespace ResoniteNESApp
                 {
                     forceRefreshedFrameFromMMF = false;
                 }
+
+                latestReceivedFrameMillisecondsOffset = millisecondsOffset;
 
                 readPixelDataLength = _pixelDataBinaryReader.ReadInt32();
 

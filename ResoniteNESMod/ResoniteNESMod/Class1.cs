@@ -61,7 +61,7 @@ namespace ResoniteNESMod
             private static int[] readPixelData;
             private static int readPixelDataLength = -1;
             private static MemoryMappedViewStream _memoryMappedViewStream;
-            private static BinaryReader _binaryReader;
+            private static BinaryReader _pixelDataBinaryReader;
             private static Dictionary<int, colorX> colorCache = new Dictionary<int, colorX>();
             private static List<(short EndIndex, short Span)> identicalRowRangesFromMMF = new List<(short, short)>();
             private static int[] isIdenticalRow;
@@ -77,7 +77,6 @@ namespace ResoniteNESMod
             private static int latestReceivedFrameMillisecondsOffset = -1;
             private static DateTime latestInitializationAttempt = DateTime.MinValue;
             private static int ConsecutiveSetPixelDataToCanvasCalls = 0;
-            private static colorX[][] colorXArray;
 
             static void Postfix(Canvas __instance)
             {
@@ -152,7 +151,7 @@ namespace ResoniteNESMod
                 readPixelData = new int[Config.GetValue(CANVAS_SLOT_WIDTH) * Config.GetValue(CANVAS_SLOT_HEIGHT)];
                 _memoryMappedFile = MemoryMappedFile.OpenExisting(MemoryMappedFileName);
                 _memoryMappedViewStream = _memoryMappedFile.CreateViewStream();
-                _binaryReader = new BinaryReader(_memoryMappedViewStream);
+                _pixelDataBinaryReader = new BinaryReader(_memoryMappedViewStream);
                 latestReceivedFrameMillisecondsOffset = -1;
                 Msg("_memoryMappedFile has been newly initialized with " + MemoryMappedFileName);
 
@@ -167,7 +166,6 @@ namespace ResoniteNESMod
                 // Initialize the cache
                 imageComponentCache = new Image[canvasSlotHeight][];
                 horizontalLayoutComponentCache = new HorizontalLayout[canvasSlotHeight];
-                colorXArray = new colorX[canvasSlotHeight][];
 
                 // For the count of the height constant, call contentSlot.AddSlot
                 for (int i = 0; i < canvasSlotHeight; i++)
@@ -178,7 +176,6 @@ namespace ResoniteNESMod
                     horizontalLayoutComponentCache[i] = horizontalLayoutComponent;
                     horizontalLayoutComponent.PaddingTop.Value = i;
                     horizontalLayoutComponent.PaddingBottom.Value = canvasSlotHeight - i - 1;
-                    colorXArray[i] = new colorX[canvasSlotWidth];
 
                     // Create new slots for each column in the horizontal layout and add them to the cache
                     imageComponentCache[i] = new Image[canvasSlotWidth];
@@ -193,20 +190,26 @@ namespace ResoniteNESMod
                         // Set the tint to a random color
                         colorX randomColor = new colorX((float)rand.NextDouble(), (float)rand.NextDouble(), (float)rand.NextDouble(), 1);
                         imageComponent.Tint.Value = randomColor;
-                        colorXArray[i][j] = randomColor;
                     }
                 }
                 Msg("Created new HorizontalLayouts according to the height constant: " + canvasSlotHeight);
             }
 
+            static void UnpackXYZ(Int32 packedXYZ, out int X, out int Y, out int Z)
+            {
+                X = (packedXYZ / 1000000) % 1000;
+                Y = (packedXYZ / 1000) % 1000;
+                Z = packedXYZ % 1000;
+            }
 
             static void SetPixelDataToCanvas(Canvas __instance)
             {
+                //StringBuilder logBuilder = new StringBuilder();
+                //logBuilder.AppendFormat("{0}, {1};", latestReceivedFrameMillisecondsOffset, readPixelDataLength);
+
                 int i = 0;
                 int packedRGB;
-                float R, G, B;
-                int packedXYZ, xStart, y, spanLength;
-                int x, xEnd;
+                float Rfloat, Gfloat, Bfloat;
                 colorX cachedColor;
 
                 while (i < readPixelDataLength)
@@ -216,21 +219,22 @@ namespace ResoniteNESMod
                     // Check if we already have this RGB value cached
                     if (!colorCache.TryGetValue(packedRGB, out cachedColor))
                     {
+                        UnpackXYZ(packedRGB, out int R, out int G, out int B); // Unpack RGB
+
                         // If not, create and cache it
-                        R = (float)Math.Round((((packedRGB / 1000000) % 1000) / 1000f), 2);
-                        G = (float)Math.Round((((packedRGB / 1000) % 1000) / 1000f), 2);
-                        B = (float)Math.Round((packedRGB % 1000) / 1000f, 2);
+                        Rfloat = (float)R / 1000f;
+                        Gfloat = (float)G / 1000f;
+                        Bfloat = (float)B / 1000f;
 
                         //cachedColor = new colorX(R + 0.01f, G + 0.01f, B + 0.01f, 1);
-                        cachedColor = new colorX(R, G, B, 1, ColorProfile.Linear);
+                        cachedColor = new colorX(Rfloat, Gfloat, Bfloat, 1, ColorProfile.Linear);
                         colorCache[packedRGB] = cachedColor;
                     }
 
                     while (i < readPixelDataLength && readPixelData[i] >= 0)
                     {
-                        packedXYZ = readPixelData[i++];
-                        xStart = (packedXYZ / 1000000) % 1000;
-                        y = (packedXYZ / 1000) % 1000;
+                        int packedxStartYSpan = readPixelData[i++];
+                        UnpackXYZ(packedxStartYSpan, out int xStart, out int y, out int spanLength);
 
 
                         if (isIdenticalRow[y] == 1 && !forceRefreshedFrameFromMMF)
@@ -238,14 +242,10 @@ namespace ResoniteNESMod
                             if (isIdentincalRowRangeEndIndex[y] != 1) continue;
                         }
 
-
-                        //Same as: xEnd = xStart + spanLength;
-                        xEnd = ((packedXYZ / 1000000) % 1000) + (packedXYZ % 1000);
-
-                        for (x = xStart; x < xEnd; x++)
+                        for (int x = xStart; x < xStart + spanLength; x++)
                         {
                             imageComponentCache[y][x].Tint.Value = cachedColor;
-                            colorXArray[y][x] = cachedColor;
+                            //logBuilder.AppendFormat("{0}, {1}{2}{3}; ", packedRGB, x, y, spanLength);
                         }
                     }
                     i++; // Skip the negative delimiter. We've hit a new color.
@@ -257,13 +257,13 @@ namespace ResoniteNESMod
                     {
                         if (isIdentincalRowRangeEndIndex[j] == 1)
                         {
-                            spanLength = identincalRowSpanByEndIndex[j];
+                            int spanLength = identincalRowSpanByEndIndex[j];
                             //int targetPaddingTop = j - spanLength - 1;
                             int targetPaddingTop = j - spanLength;
                             if (horizontalLayoutComponentCache[j].PaddingTop.Value != targetPaddingTop)
                             {
                                 horizontalLayoutComponentCache[j].PaddingTop.Value = targetPaddingTop;
-                                Msg("Set the padding top of the horizontal layout at index " + j + " to " + horizontalLayoutComponentCache[j].PaddingTop.Value);
+                                //Msg("Set the padding top of the horizontal layout at index " + j + " to " + horizontalLayoutComponentCache[j].PaddingTop.Value);
                             }
                         }
                     }
@@ -274,11 +274,13 @@ namespace ResoniteNESMod
                 { 
                     if (forceRefreshedFrameFromMMF || ( isIdenticalRow[j] != 1 && horizontalLayoutComponentCache[j].PaddingTop.Value != j))
                     {
+                        float oldPaddingTop = horizontalLayoutComponentCache[j].PaddingTop.Value;
                         horizontalLayoutComponentCache[j].PaddingTop.Value = j;
-                        Msg("Reset the padding top of the horizontal layout at index " + j + " to " + horizontalLayoutComponentCache[j].PaddingTop.Value);
+                        //Msg("Reset the padding top of the horizontal layout at index " + j + " from " + oldPaddingTop + " to " + horizontalLayoutComponentCache[j].PaddingTop.Value);
                     }
                 }
 
+                //Msg(logBuilder);
                 // We've finished rendering the frame, so write the latestReceivedFrameMillisecondsOffset to the MMF
                 WriteLatestReceivedFrameMillisecondsOffsetToMemoryMappedFile();
             }
@@ -303,14 +305,14 @@ namespace ResoniteNESMod
                 {
                     _memoryMappedViewStream.Position = 0;
 
-                    if (_binaryReader == null)
+                    if (_pixelDataBinaryReader == null)
                     {
                         Console.WriteLine("Binary reader not initialized");
                         readPixelDataLength = -1;
                         return;
                     }
 
-                    int millisecondsOffset = _binaryReader.ReadInt32();
+                    int millisecondsOffset = _pixelDataBinaryReader.ReadInt32();
                     if (millisecondsOffset == latestReceivedFrameMillisecondsOffset)
                     {
                         readPixelDataLength = -1;
@@ -329,12 +331,12 @@ namespace ResoniteNESMod
 
                     latestReceivedFrameMillisecondsOffset = millisecondsOffset;
 
-                    readPixelDataLength = _binaryReader.ReadInt32();
+                    readPixelDataLength = _pixelDataBinaryReader.ReadInt32();
 
                     // Read the pairs of 16-bit integers (identicalRowRanges)
                     identicalRowRangesFromMMF.Clear();
 
-                    if (_binaryReader.ReadInt16() < 0)
+                    if (_pixelDataBinaryReader.ReadInt16() < 0)
                     {
                         // If the first 16-bit int is negative, that indicates that there are no identicalRowRanges
                     }
@@ -343,7 +345,7 @@ namespace ResoniteNESMod
                         _memoryMappedViewStream.Position -= sizeof(short); // Rewind the stream by 2 bytes, so we don't have to store the 1st 16 bit int
                         while (true)
                         {
-                            short endIndex = _binaryReader.ReadInt16();
+                            short endIndex = _pixelDataBinaryReader.ReadInt16();
 
 
                             if (endIndex > 999)
@@ -354,7 +356,7 @@ namespace ResoniteNESMod
                                 throw new Exception("endIndex > 999");
                             }
 
-                            short span = _binaryReader.ReadInt16();
+                            short span = _pixelDataBinaryReader.ReadInt16();
 
                             if (span < 0)  // Negative span indicates the end of the range list
                             {
@@ -372,7 +374,7 @@ namespace ResoniteNESMod
                     // Now read the pixel data, based on readPixelDataLength
                     for (int i = 0; i < readPixelDataLength; i++)
                     {
-                        readPixelData[i] = _binaryReader.ReadInt32();
+                        readPixelData[i] = _pixelDataBinaryReader.ReadInt32();
                     }
 
                     _memoryMappedViewStream.Position = 0;
@@ -387,27 +389,12 @@ namespace ResoniteNESMod
                 }
             }
 
-            static void ReassignTints()
-            {
-                for (int i = 0; i < colorXArray.Length; i++)
-                {
-                    for (int j = 0; j < colorXArray[i].Length; j++)
-                    {
-                        imageComponentCache[i][j].Tint.Value = colorXArray[i][j];
-                    }
-                }
-                Msg("Reassigned tints");
-            }
-
-
             [HarmonyPatch(typeof(FrooxEngine.Animator), "OnCommonUpdate")]
             public static class AnimatorOnCommonUpdatePatcher
             {
                 public static void Postfix()
                 {
                     if (!initialized || _latestCanvasInstance == null) return;
-                    ReassignTints();
-
 
                     if (readPixelDataLength == -1 && Config.GetValue(ENABLED))
                     {
@@ -416,7 +403,7 @@ namespace ResoniteNESMod
                         // This can happen if ReadFromMemoryMappedFile() raised an exception
                         if (readPixelDataLength == -1) return;
 
-                        Msg($"Identical Row Ranges from MMF: {string.Join("; ", identicalRowRangesFromMMF.Select(range => $"End Index: {range.EndIndex}, Span: {range.Span}"))}");
+                        //Msg($"Identical Row Ranges from MMF: {string.Join("; ", identicalRowRangesFromMMF.Select(range => $"End Index: {range.EndIndex}, Span: {range.Span}"))}");
 
                         isIdenticalRow = new int[Config.GetValue(CANVAS_SLOT_HEIGHT)];
                         isIdentincalRowRangeEndIndex = new int[Config.GetValue(CANVAS_SLOT_HEIGHT)];

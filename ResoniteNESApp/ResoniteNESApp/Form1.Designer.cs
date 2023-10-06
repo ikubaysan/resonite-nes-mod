@@ -180,7 +180,7 @@
             this.textBox5.Name = "textBox5";
             this.textBox5.Size = new System.Drawing.Size(100, 20);
             this.textBox5.TabIndex = 15;
-            this.textBox5.Text = "10";
+            this.textBox5.Text = "100000";
             // 
             // label6
             // 
@@ -290,7 +290,7 @@
             this.textBox6.Name = "textBox6";
             this.textBox6.Size = new System.Drawing.Size(100, 20);
             this.textBox6.TabIndex = 19;
-            this.textBox6.Text = "10";
+            this.textBox6.Text = "30";
             // 
             // label8
             // 
