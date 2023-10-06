@@ -247,6 +247,10 @@ namespace ResoniteNESApp
 
         private int[] GeneratePixelDataFromFCEUX(int width, int height, bool forceFullFrame)
         {
+
+            // Lowest should be 2.
+            const int MIN_SPAN_LENGTH = 3;
+
             Bitmap bmp = CaptureFCEUXWindow();
             if (bmp == null)
             {
@@ -310,7 +314,11 @@ namespace ResoniteNESApp
                 }
                 else if (startIdenticalRowIndex.HasValue)
                 {
-                    identicalRowRanges.Add((startIdenticalRowIndex.Value, y - 1));
+                    int spanLength = y - startIdenticalRowIndex.Value;
+                    if (spanLength >= MIN_SPAN_LENGTH)
+                    {
+                        identicalRowRanges.Add((startIdenticalRowIndex.Value, y - 1));
+                    }
                     startIdenticalRowIndex = null;
                 }
 
@@ -320,7 +328,7 @@ namespace ResoniteNESApp
                 currentRowPixels = temp;
             }
 
-            if (startIdenticalRowIndex.HasValue)
+            if (startIdenticalRowIndex.HasValue && height - startIdenticalRowIndex.Value >= MIN_SPAN_LENGTH)
             {
                 identicalRowRanges.Add((startIdenticalRowIndex.Value, height - 1));
             }
@@ -350,6 +358,7 @@ namespace ResoniteNESApp
 
             return pixelDataList.ToArray();
         }
+
 
 
 
