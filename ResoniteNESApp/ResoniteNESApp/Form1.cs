@@ -238,17 +238,28 @@ namespace ResoniteNESApp
             return 1000000000 + x * 1000000 + y * 1000 + z;
         }
 
-        static void UnpackXYZ(int packedXYZ, out int X, out int Y, out int Z)
+        static void UnpackXYZ(Int32 packedXYZ, out int X, out int Y, out int Z)
         {
             X = (packedXYZ / 1000000) % 1000;
             Y = (packedXYZ / 1000) % 1000;
             Z = packedXYZ % 1000;
         }
 
+
+        static int PackXY(int x, int y)
+        {
+            return 1000000 + x * 1000 + y;
+        }
+
+        static void UnpackXY(Int16 packedXY, out int X, out int Y)
+        {
+            X = (packedXY / 1000) % 1000;
+            Y = packedXY % 1000;
+        }
+
+
         private int[] GeneratePixelDataFromFCEUX(int width, int height, bool forceFullFrame)
         {
-
-            // Lowest should be 2.
             const int MIN_SPAN_LENGTH = 3;
 
             Bitmap bmp = CaptureFCEUXWindow();
@@ -263,20 +274,65 @@ namespace ResoniteNESApp
 
             List<Color> previousRowPixels = new List<Color>();
             List<Color> currentRowPixels = new List<Color>();
-
             List<(int Start, int End)> identicalRowRanges = new List<(int Start, int End)>();
             int? startIdenticalRowIndex = null;
 
+            // First loop to identify identical rows
             for (int y = 0; y < height; y++)
             {
                 currentRowPixels.Clear();
 
+                for (int x = 0; x < width; x++)
+                {
+                    currentRowPixels.Add(bmp.GetPixel(x, y));
+                }
+
+                if (currentRowPixels.SequenceEqual(previousRowPixels))
+                {
+                    if (!startIdenticalRowIndex.HasValue)
+                    {
+                        startIdenticalRowIndex = y - 1;
+                    }
+                }
+                else if (startIdenticalRowIndex.HasValue)
+                {
+                    int spanLength = y - startIdenticalRowIndex.Value;
+                    if (spanLength >= MIN_SPAN_LENGTH)
+                    {
+                        identicalRowRanges.Add((startIdenticalRowIndex.Value, y - 1));
+                    }
+                    startIdenticalRowIndex = null;
+                }
+
+                var temp = previousRowPixels;
+                previousRowPixels = currentRowPixels;
+                currentRowPixels = temp;
+            }
+            if (startIdenticalRowIndex.HasValue && height - startIdenticalRowIndex.Value >= MIN_SPAN_LENGTH)
+            {
+                identicalRowRanges.Add((startIdenticalRowIndex.Value, height - 1));
+            }
+
+            // Print the ranges of contiguous identical rows
+            int totalCount = 0;
+            foreach (var range in identicalRowRanges)
+            {
+                totalCount += (range.End - range.Start + 1);
+            }
+            Console.Write(totalCount + " contiguous identical rows in ranges: ");
+            foreach (var range in identicalRowRanges)
+            {
+                Console.Write("[" + range.Start + "-" + range.End + "] ");
+            }
+            Console.Write("\n");
+
+            // Second loop for processing pixel data
+            for (int y = 0; y < height; y++)
+            {
                 int x = 0;
                 while (x < width)
                 {
                     Color pixel = bmp.GetPixel(x, y);
-                    currentRowPixels.Add(pixel);
-
                     Color currentPixel = _currentBitmap.GetPixel(x, y);
 
                     if (forceFullFrame || !currentPixel.Equals(pixel))
@@ -296,7 +352,6 @@ namespace ResoniteNESApp
                         {
                             rgbToSpans[packedRGB] = new List<int>();
                         }
-
                         rgbToSpans[packedRGB].Add(packedXYZ);
                     }
                     else
@@ -304,60 +359,20 @@ namespace ResoniteNESApp
                         x++;
                     }
                 }
-
-                if (currentRowPixels.SequenceEqual(previousRowPixels))
-                {
-                    if (!startIdenticalRowIndex.HasValue)
-                    {
-                        startIdenticalRowIndex = y - 1; // Start from the previous row
-                    }
-                }
-                else if (startIdenticalRowIndex.HasValue)
-                {
-                    int spanLength = y - startIdenticalRowIndex.Value;
-                    if (spanLength >= MIN_SPAN_LENGTH)
-                    {
-                        identicalRowRanges.Add((startIdenticalRowIndex.Value, y - 1));
-                    }
-                    startIdenticalRowIndex = null;
-                }
-
-                // Swap the lists instead of copying for efficiency
-                var temp = previousRowPixels;
-                previousRowPixels = currentRowPixels;
-                currentRowPixels = temp;
             }
 
-            if (startIdenticalRowIndex.HasValue && height - startIdenticalRowIndex.Value >= MIN_SPAN_LENGTH)
-            {
-                identicalRowRanges.Add((startIdenticalRowIndex.Value, height - 1));
-            }
-
-            // Now, compile the pixel data in the new format
+            // Compile the pixel data in the new format
             foreach (var kvp in rgbToSpans)
             {
-                pixelDataList.Add(kvp.Key); // RGB value
-                pixelDataList.AddRange(kvp.Value); // Spans
-                pixelDataList.Add(-kvp.Value.Last()); // Negation as delimiter
+                pixelDataList.Add(kvp.Key);
+                pixelDataList.AddRange(kvp.Value);
+                pixelDataList.Add(-kvp.Value.Last());
             }
 
             bmp.Dispose();
-
-            // Print the ranges of contiguous identical rows
-            int totalCount = 0;
-            foreach (var range in identicalRowRanges)
-            {
-                totalCount += (range.End - range.Start + 1);
-            }
-            Console.Write(totalCount + " contiguous identical rows in ranges: ");
-            foreach (var range in identicalRowRanges)
-            {
-                Console.Write("[" + range.Start + "-" + range.End + "] ");
-            }
-            Console.Write("\n");
-
             return pixelDataList.ToArray();
         }
+
 
 
 
