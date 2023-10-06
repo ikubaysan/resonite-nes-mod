@@ -127,7 +127,7 @@ namespace ResoniteNESApp
             }
 
             ReadFromMemoryMappedFile();
-            Console.WriteLine($"Identical Row Ranges from MMF: {string.Join("; ", identicalRowRangesFromMMF.Select(range => $"End Index: {range.EndIndex}, Span: {range.Span}"))}");
+            //Console.WriteLine($"Identical Row Ranges from MMF: {string.Join("; ", identicalRowRangesFromMMF.Select(range => $"End Index: {range.EndIndex}, Span: {range.Span}"))}");
 
             if (readPixelData == null) return;
 
@@ -287,7 +287,7 @@ namespace ResoniteNESApp
 
         private int[] GeneratePixelDataFromFCEUX(int width, int height, bool forceFullFrame)
         {
-            const int MIN_SPAN_LENGTH = 3;
+            const int MIN_SPAN_LENGTH = 10;
 
             Bitmap bmp = CaptureFCEUXWindow();
             if (bmp == null)
@@ -380,7 +380,7 @@ namespace ResoniteNESApp
             // Print how many rows we force refreshed if the count is > 0
             if (rowsPreviouslyInContiguousRange.Count > 0)
             { 
-                Console.WriteLine(rowsPreviouslyInContiguousRange.Count + " rows to force refresh.");
+                //Console.WriteLine(rowsPreviouslyInContiguousRange.Count + " rows to force refresh.");
                 //forceFullFrame = true;
             }
 
@@ -533,9 +533,6 @@ namespace ResoniteNESApp
                 i++; // Skip the negative delimiter
             }
 
-
-
-
             if (!forceRefreshedFrameFromMMF)
             {
                 for (int j = 0; j < isIdentincalRowRangeEndIndex.Length; j++)
@@ -546,7 +543,7 @@ namespace ResoniteNESApp
                         if (GetRowHeight(j) != spanLength)
                         {
                             SetRowHeight(j, spanLength);
-                            Console.WriteLine("Set the span of the row at index " + j + " to expanded span " + spanLength);
+                            //Console.WriteLine("Set the span of the row at index " + j + " to expanded span " + spanLength);
                         }
                     }
                 }
@@ -558,15 +555,11 @@ namespace ResoniteNESApp
                 if (forceRefreshedFrameFromMMF || (isIdenticalRow[j] != 1 && GetRowHeight(j) != 1))
                 {
                     SetRowHeight(j, 1);
-                    Console.WriteLine("Reset the span of the row at index " + j + " to 1");
+                    //Console.WriteLine("Reset the span of the row at index " + j + " to 1");
                 }
             }
 
-            Console.WriteLine(nPixelsChanged + " pixels changed since previous frame. pixelData len: " + readPixelDataLength);
-
-
-            // Just a test
-            //UpdateRowHeight(235, 50);
+            //Console.WriteLine(nPixelsChanged + " pixels changed since previous frame. pixelData len: " + readPixelDataLength);
 
             // After setting all pixels, apply the row expansions
             foreach (var row in rowExpansionAmounts)
