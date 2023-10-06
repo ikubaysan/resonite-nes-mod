@@ -64,7 +64,11 @@ namespace ResoniteNESMod
             private static BinaryReader _binaryReader;
             private static Dictionary<int, colorX> colorCache = new Dictionary<int, colorX>();
             private static List<(short EndIndex, short Span)> identicalRowRangesFromMMF = new List<(short, short)>();
-            private static int[] identincalRowIndices;
+            private static int[] IsIdenticalRow;
+            private static int[] IsIdentincalRowRangeEndIndex;
+            private static int[] identincalRowSpanByEndIndex;
+
+
 
 
             static void Postfix(Canvas __instance)
@@ -309,22 +313,32 @@ namespace ResoniteNESMod
 
                     if (readPixelDataLength == -1 && Config.GetValue(ENABLED))
                     {
+
                         ReadFromMemoryMappedFile();
+                        // This can happen if ReadFromMemoryMappedFile() raised an exception
+                        if (readPixelDataLength == -1) return;
+
                         Msg($"Identical Row Ranges from MMF: {string.Join("; ", identicalRowRangesFromMMF.Select(range => $"End Index: {range.EndIndex}, Span: {range.Span}"))}");
 
-                        identincalRowIndices = new int[Config.GetValue(CANVAS_SLOT_HEIGHT)];
+                        IsIdenticalRow = new int[Config.GetValue(CANVAS_SLOT_HEIGHT)];
+                        IsIdentincalRowRangeEndIndex = new int[Config.GetValue(CANVAS_SLOT_HEIGHT)];
+                        identincalRowSpanByEndIndex = new int[Config.GetValue(CANVAS_SLOT_HEIGHT)];
 
                         foreach (var range in identicalRowRangesFromMMF)
                         {
                             int startIndex = range.EndIndex - range.Span + 1;
                             for (int i = startIndex; i <= range.EndIndex; i++)
                             {
-                                identincalRowIndices[i] = 1;
+                                IsIdenticalRow[i] = 1;
                             }
+                            IsIdentincalRowRangeEndIndex[range.EndIndex] = 1;
+                            identincalRowSpanByEndIndex[range.EndIndex] = range.Span;
                         }
 
                         // Print identincalRowIndices
-                        Msg($"identincalRowIndices: {string.Join("; ", identincalRowIndices)}");
+                        Msg($"IsIdenticalRow: {string.Join("; ", IsIdenticalRow)}");
+                        Msg($"IsIdentincalRowRangeEndIndex: {string.Join("; ", IsIdentincalRowRangeEndIndex)}");
+                        Msg($"identincalRowSpanByEndIndex: {string.Join("; ", identincalRowSpanByEndIndex)}");
 
                         return;
                     }
