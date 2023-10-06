@@ -63,6 +63,7 @@ namespace ResoniteNESMod
             private static MemoryMappedViewStream _memoryMappedViewStream;
             private static BinaryReader _binaryReader;
             private static Dictionary<int, colorX> colorCache = new Dictionary<int, colorX>();
+            private static List<(short EndIndex, short Span)> identicalRowRangesFromMMF;
 
 
             static void Postfix(Canvas __instance)
@@ -221,7 +222,7 @@ namespace ResoniteNESMod
                 }
             }
 
-            public static void ReadFromMemoryMappedFile()
+            static void ReadFromMemoryMappedFile()
             {
                 try
                 {
@@ -242,7 +243,26 @@ namespace ResoniteNESMod
 
                     readPixelDataLength = _binaryReader.ReadInt32();
 
+                    // Read the pairs of 16-bit integers (identicalRowRanges)
+                    identicalRowRangesFromMMF = new List<(short, short)>();
+                    while (true)
+                    {
+                        short endIndex = _binaryReader.ReadInt16();
+                        short span = _binaryReader.ReadInt16();
 
+                        if (span < 0)  // Negative span indicates the end of the range list
+                        {
+                            span = (short)-span;  // Convert span back to positive
+                            identicalRowRangesFromMMF.Add((endIndex, span));
+                            break;
+                        }
+                        else
+                        {
+                            identicalRowRangesFromMMF.Add((endIndex, span));
+                        }
+                    }
+
+                    // Now read the pixel data, based on readPixelDataLength
                     for (int i = 0; i < readPixelDataLength; i++)
                     {
                         readPixelData[i] = _binaryReader.ReadInt32();
@@ -270,6 +290,8 @@ namespace ResoniteNESMod
                     if (readPixelDataLength == -1 && Config.GetValue(ENABLED))
                     {
                         ReadFromMemoryMappedFile();
+                        Msg($"Identical Row Ranges from MMF: {string.Join("; ", identicalRowRangesFromMMF.Select(range => $"End Index: {range.EndIndex}, Span: {range.Span}"))}");
+
                         return;
                     }
 
