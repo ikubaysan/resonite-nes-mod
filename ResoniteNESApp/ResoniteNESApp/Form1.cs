@@ -45,28 +45,34 @@ namespace ResoniteNESApp
 
         private Timer _timer;
         private Random _random;
-        private const string MemoryMappedFileName = "ResonitePixelData";
         private const int FRAME_WIDTH = 256;
         private const int FRAME_HEIGHT = 240;
         private int FPS = 24;
         // Add 1 to account for the count of pixels that have changed, which is always the 1st integer, written before the pixel data.
         // Then add FRAME_HEIGHT * 2 to account for pairs of 16-bit integers for identicalRowRanges
-        private const int MemoryMappedFileSize = (((FRAME_WIDTH * FRAME_HEIGHT * 2) + 1) * sizeof(int)) + (FRAME_HEIGHT * 2 * sizeof(short));
-        private MemoryMappedFile _memoryMappedFile;
+        private const int PixelDataMemoryMappedFileSize = (((FRAME_WIDTH * FRAME_HEIGHT * 2) + 1) * sizeof(int)) + (FRAME_HEIGHT * 2 * sizeof(short));
+        private MemoryMappedFile _pixelDataMemoryMappedFile;
         private Bitmap _currentBitmap = new Bitmap(FRAME_WIDTH, FRAME_HEIGHT);
         private const int FULL_FRAME_INTERVAL = 10 * 1000; // 10 seconds in milliseconds
         private DateTime _lastFullFrameTime = DateTime.MinValue;
         private DateTime programStartTime;
-        private int latestFrameMillisecondsOffset;
         int[] readPixelData = new int[FRAME_WIDTH * FRAME_HEIGHT];
         private int readPixelDataLength;
-        private static MemoryMappedViewStream _memoryMappedViewStream = null;
-        private static BinaryReader _binaryReader = null;
         private List<(int Start, int End)> previousIdenticalRowRanges = new List<(int Start, int End)>();
         private List<(int Start, int End)> identicalRowRanges;
         private Dictionary<int, List<int>> rgbToSpans; // Map RGB values to spans
         private int[] pixelData;
 
+        private const string PixelDataMemoryMappedFileName = "ResonitePixelData";
+        private static MemoryMappedViewStream _pixelDataMemoryMappedViewStream = null;
+        private static BinaryReader _pixelDataBinaryReader = null;
+        private Int32 latestPublishedFrameMillisecondsOffset;
+
+        private static MemoryMappedViewStream _clientRenderConfirmationMemoryMappedViewStream = null;
+        private static BinaryReader _clientRenderConfirmationMemoryMappedBinaryReader = null;
+
+
+        // Variables for mocking mod
         private static List<(short EndIndex, short Span)> identicalRowRangesFromMMF = new List<(short, short)>();
         private static int[] isIdenticalRow;
         private static int[] isIdentincalRowRangeEndIndex;
@@ -75,6 +81,12 @@ namespace ResoniteNESApp
         private static bool forceRefreshedFrameFromMMF;
         private Dictionary<int, int> rowExpansionAmounts = new Dictionary<int, int>();
         private int minContiguousIdenticalRowSpan = 10;
+        private int latestReceivedFrameMillisecondsOffset = -1;
+        private const string ClientRenderConfirmationMemoryMappedFileName = "ResoniteClientRenderConfirmation";
+        private const int ClientRenderConfirmationMemoryMappedFileSize = sizeof(int);
+        private MemoryMappedFile _clientRenderConfirmationMemoryMappedFile;
+
+
 
 
 
@@ -100,9 +112,47 @@ namespace ResoniteNESApp
         }
 
 
+        /// <summary>
+        /// Returns true if the client has confirmed that it has rendered the latest frame which this program has published.
+        /// </summary>
+        /// <returns></returns>
+        private bool clientRenderConfirmed()
+        {
+            try
+            {
+                using (MemoryMappedFile mmf = MemoryMappedFile.OpenExisting(ClientRenderConfirmationMemoryMappedFileName))
+                {
+                    using (MemoryMappedViewStream stream = mmf.CreateViewStream())
+                    {
+                        using (BinaryReader reader = new BinaryReader(stream))
+                        {
+                            int value = reader.ReadInt32();
+                            return value == latestPublishedFrameMillisecondsOffset;
+                        }
+                    }
+                }
+            }
+            catch (FileNotFoundException)
+            {
+                Console.WriteLine("The memory-mapped file " + ClientRenderConfirmationMemoryMappedFileName + " does not exist.");
+            }
+            catch (IOException e)
+            {
+                Console.WriteLine($"Error reading from the memory-mapped file " + ClientRenderConfirmationMemoryMappedFileName + ": { e.Message}");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"An unexpected error occurred when attempting to read memory-mapped file " + ClientRenderConfirmationMemoryMappedFileName + ": { e.Message}");
+            }
+            return false;
+        }
+
+
         private void Timer_Tick(object sender, EventArgs e)
         {
             if (!checkBox1.Checked) return;
+
+            if (checkBox3.Checked && !(clientRenderConfirmed())) return;
 
             bool forceFullFrame = false;
             if ((DateTime.Now - _lastFullFrameTime).TotalMilliseconds >= FULL_FRAME_INTERVAL)
@@ -116,22 +166,19 @@ namespace ResoniteNESApp
             if (pixelData == null) return;
 
             // Write to MemoryMappedFile
-            WriteToMemoryMappedFile(pixelData, forceFullFrame);
+            WritePixelDataToMemoryMappedFile(pixelData, forceFullFrame);
 
             // Read from MemoryMappedFile
-
-            if (_memoryMappedViewStream == null)
+            if (_pixelDataMemoryMappedViewStream == null)
             {
-                _memoryMappedViewStream = _memoryMappedFile.CreateViewStream();
-                _binaryReader = new BinaryReader(_memoryMappedViewStream);
+                _pixelDataMemoryMappedViewStream = _pixelDataMemoryMappedFile.CreateViewStream();
+                _pixelDataBinaryReader = new BinaryReader(_pixelDataMemoryMappedViewStream);
             }
 
-            ReadFromMemoryMappedFile();
+            ReadPixelDataFromMemoryMappedFile();
             //Console.WriteLine($"Identical Row Ranges from MMF: {string.Join("; ", identicalRowRangesFromMMF.Select(range => $"End Index: {range.EndIndex}, Span: {range.Span}"))}");
 
             if (readPixelData == null) return;
-
-
 
             isIdenticalRow = new int[FRAME_HEIGHT];
             isIdentincalRowRangeEndIndex = new int[FRAME_HEIGHT];
@@ -153,6 +200,12 @@ namespace ResoniteNESApp
 
             // Convert pixel data to Bitmap and set to PictureBox
             pictureBox1.Image = SetPixelDataToBitmap(FRAME_WIDTH, FRAME_HEIGHT);
+
+            if (checkBox4.Checked)
+            {
+                WriteLatestReceivedFrameMillisecondsOffsetToMemoryMappedFile();
+                Console.WriteLine("Confirmation of render from server is enabled, so called WriteLatestReceivedFrameMillisecondsOffsetToMemoryMappedFile()");
+            }
         }
 
         private IntPtr FindWindowByTitleSubstring(string titleSubstring)
@@ -569,29 +622,39 @@ namespace ResoniteNESApp
             return _currentBitmap;
         }
 
-        private void WriteToMemoryMappedFile(int[] pixelData, bool forceRefreshedFrame)
+        private void WriteLatestReceivedFrameMillisecondsOffsetToMemoryMappedFile()
+        {
+            if (_clientRenderConfirmationMemoryMappedFile == null)
+            {
+                _clientRenderConfirmationMemoryMappedFile = MemoryMappedFile.CreateOrOpen(ClientRenderConfirmationMemoryMappedFileName, ClientRenderConfirmationMemoryMappedFileSize);
+            }
+            using (MemoryMappedViewStream stream = _clientRenderConfirmationMemoryMappedFile.CreateViewStream())
+            using (BinaryWriter writer = new BinaryWriter(stream))
+            {
+                writer.Write(latestReceivedFrameMillisecondsOffset);
+            }
+        }
+
+        private void WritePixelDataToMemoryMappedFile(int[] pixelData, bool forceRefreshedFrame)
         {
             try
             {
-                if (_memoryMappedFile == null)
+                if (_pixelDataMemoryMappedFile == null)
                 {
                     // Note: if something is accessing the MemoryMappedFile, this will open and not create a new one.
                     // Keep this in mind if you're experimenting with resizing the MemoryMappedFile. You'll want to change this to
                     // close the programs using it and temporarily change this to MemoryMappedFile.CreateNew() 
-                    _memoryMappedFile = MemoryMappedFile.CreateOrOpen(MemoryMappedFileName, MemoryMappedFileSize);
+                    _pixelDataMemoryMappedFile = MemoryMappedFile.CreateOrOpen(PixelDataMemoryMappedFileName, PixelDataMemoryMappedFileSize);
                 }
 
-                using (MemoryMappedViewStream stream = _memoryMappedFile.CreateViewStream())
+                using (MemoryMappedViewStream stream = _pixelDataMemoryMappedFile.CreateViewStream())
                 using (BinaryWriter writer = new BinaryWriter(stream))
                 {
-                    
                     // We use the sign of the 1st 32-bit integer to indicate whether the frame is force refreshed or not, and also as a way to give the reader a way to know if the frame has changed.
-                    Int32 millisecondsOffset = DateTime.UtcNow.Millisecond;
-                    if (forceRefreshedFrame)
-                        writer.Write(-millisecondsOffset);
-                    else
-                        writer.Write(millisecondsOffset);
+                    latestPublishedFrameMillisecondsOffset = DateTime.UtcNow.Millisecond;
+                    if (forceRefreshedFrame) latestPublishedFrameMillisecondsOffset = -latestPublishedFrameMillisecondsOffset;
 
+                    writer.Write(latestPublishedFrameMillisecondsOffset);
                     writer.Write((Int32)pixelData.Length); // The amount of integers that are currently relevant
 
                     if (identicalRowRanges.Count == 0)
@@ -638,26 +701,19 @@ namespace ResoniteNESApp
             }
         }
 
-
-        private void ReadFromMemoryMappedFile()
+        private void ReadPixelDataFromMemoryMappedFile()
         {
             try
             {
-                if (_binaryReader == null)
+                if (_pixelDataBinaryReader == null)
                 {
                     Console.WriteLine("Binary reader not initialized");
                     readPixelDataLength = -1;
                     return;
                 }
 
-                int millisecondsOffset = _binaryReader.ReadInt32();
-                if (millisecondsOffset == latestFrameMillisecondsOffset)
-                {
-                    readPixelDataLength = -1;
-                    return;
-                }
-
-                if (millisecondsOffset < 0)
+                latestReceivedFrameMillisecondsOffset = _pixelDataBinaryReader.ReadInt32();
+                if (latestReceivedFrameMillisecondsOffset < 0)
                 {
                     // If the 1st 32-bit int is negative, that indicates that the frame is force refreshed
                     forceRefreshedFrameFromMMF = true;
@@ -667,23 +723,21 @@ namespace ResoniteNESApp
                     forceRefreshedFrameFromMMF = false;
                 }
 
-                latestFrameMillisecondsOffset = millisecondsOffset;
-
-                readPixelDataLength = _binaryReader.ReadInt32();
+                readPixelDataLength = _pixelDataBinaryReader.ReadInt32();
 
                 // Read the pairs of 16-bit integers (identicalRowRanges)
                 identicalRowRangesFromMMF.Clear();
 
-                if (_binaryReader.ReadInt16() < 0)
+                if (_pixelDataBinaryReader.ReadInt16() < 0)
                 {
                     // If the first 16-bit int is negative, that indicates that there are no identicalRowRanges
                 }
                 else
                 {
-                    _memoryMappedViewStream.Position -= sizeof(short); // Rewind the stream by 2 bytes, so we don't have to store the 1st 16 bit int
+                    _pixelDataMemoryMappedViewStream.Position -= sizeof(short); // Rewind the stream by 2 bytes, so we don't have to store the 1st 16 bit int
                     while (true)
                     {
-                        short endIndex = _binaryReader.ReadInt16();
+                        short endIndex = _pixelDataBinaryReader.ReadInt16();
 
 
                         if (endIndex > 999)
@@ -694,7 +748,7 @@ namespace ResoniteNESApp
                             throw new Exception("endIndex > 999");
                         }
 
-                        short span = _binaryReader.ReadInt16();
+                        short span = _pixelDataBinaryReader.ReadInt16();
 
                         if (span < 0)  // Negative span indicates the end of the range list
                         {
@@ -712,23 +766,23 @@ namespace ResoniteNESApp
                 // Now read the pixel data, based on readPixelDataLength
                 for (int i = 0; i < readPixelDataLength; i++)
                 {
-                    readPixelData[i] = _binaryReader.ReadInt32();
+                    readPixelData[i] = _pixelDataBinaryReader.ReadInt32();
                 }
 
-                _memoryMappedViewStream.Position = 0;
+                _pixelDataMemoryMappedViewStream.Position = 0;
             }
             catch (Exception ex)
             {
                 Console.WriteLine("Error reading from MemoryMappedFile: " + ex.Message);
                 readPixelDataLength = -1;
-                _memoryMappedViewStream.Position = 0;
+                _pixelDataMemoryMappedViewStream.Position = 0;
             }
         }
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
             // Dispose the MemoryMappedFile
-            _memoryMappedFile?.Dispose();
+            _pixelDataMemoryMappedFile?.Dispose();
         }
 
         private void textBox4_TextChanged(object sender, EventArgs e)

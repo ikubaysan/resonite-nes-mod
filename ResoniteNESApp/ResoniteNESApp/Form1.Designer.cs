@@ -37,6 +37,9 @@
             this.label1 = new System.Windows.Forms.Label();
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.tabPage1 = new System.Windows.Forms.TabPage();
+            this.checkBox3 = new System.Windows.Forms.CheckBox();
+            this.label7 = new System.Windows.Forms.Label();
+            this.textBox5 = new System.Windows.Forms.TextBox();
             this.label6 = new System.Windows.Forms.Label();
             this.textBox4 = new System.Windows.Forms.TextBox();
             this.label5 = new System.Windows.Forms.Label();
@@ -48,8 +51,7 @@
             this.checkBox1 = new System.Windows.Forms.CheckBox();
             this.label2 = new System.Windows.Forms.Label();
             this.tabPage2 = new System.Windows.Forms.TabPage();
-            this.textBox5 = new System.Windows.Forms.TextBox();
-            this.label7 = new System.Windows.Forms.Label();
+            this.checkBox4 = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             this.tabControl1.SuspendLayout();
             this.tabPage1.SuspendLayout();
@@ -112,6 +114,8 @@
             // 
             // tabPage1
             // 
+            this.tabPage1.Controls.Add(this.checkBox4);
+            this.tabPage1.Controls.Add(this.checkBox3);
             this.tabPage1.Controls.Add(this.label7);
             this.tabPage1.Controls.Add(this.textBox5);
             this.tabPage1.Controls.Add(this.label6);
@@ -137,6 +141,33 @@
             this.tabPage1.Text = "tabPage1";
             this.tabPage1.UseVisualStyleBackColor = true;
             // 
+            // checkBox3
+            // 
+            this.checkBox3.AutoSize = true;
+            this.checkBox3.Location = new System.Drawing.Point(265, 172);
+            this.checkBox3.Name = "checkBox3";
+            this.checkBox3.Size = new System.Drawing.Size(111, 30);
+            this.checkBox3.TabIndex = 17;
+            this.checkBox3.Text = "Await Client \r\nRender Confirmed";
+            this.checkBox3.UseVisualStyleBackColor = true;
+            // 
+            // label7
+            // 
+            this.label7.AutoSize = true;
+            this.label7.Location = new System.Drawing.Point(230, 274);
+            this.label7.Name = "label7";
+            this.label7.Size = new System.Drawing.Size(167, 13);
+            this.label7.TabIndex = 16;
+            this.label7.Text = "Min contiguous identical row span";
+            // 
+            // textBox5
+            // 
+            this.textBox5.Location = new System.Drawing.Point(265, 294);
+            this.textBox5.Name = "textBox5";
+            this.textBox5.Size = new System.Drawing.Size(100, 20);
+            this.textBox5.TabIndex = 15;
+            this.textBox5.Text = "10";
+            // 
             // label6
             // 
             this.label6.AutoSize = true;
@@ -158,7 +189,7 @@
             // label5
             // 
             this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(557, 338);
+            this.label5.Location = new System.Drawing.Point(557, 347);
             this.label5.Name = "label5";
             this.label5.Size = new System.Drawing.Size(96, 13);
             this.label5.TabIndex = 12;
@@ -167,7 +198,7 @@
             // label4
             // 
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(445, 338);
+            this.label4.Location = new System.Drawing.Point(445, 347);
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(56, 13);
             this.label4.TabIndex = 11;
@@ -213,7 +244,7 @@
             // checkBox1
             // 
             this.checkBox1.AutoSize = true;
-            this.checkBox1.Location = new System.Drawing.Point(420, 308);
+            this.checkBox1.Location = new System.Drawing.Point(448, 308);
             this.checkBox1.Name = "checkBox1";
             this.checkBox1.Size = new System.Drawing.Size(65, 17);
             this.checkBox1.TabIndex = 7;
@@ -239,22 +270,15 @@
             this.tabPage2.Text = "tabPage2";
             this.tabPage2.UseVisualStyleBackColor = true;
             // 
-            // textBox5
+            // checkBox4
             // 
-            this.textBox5.Location = new System.Drawing.Point(265, 294);
-            this.textBox5.Name = "textBox5";
-            this.textBox5.Size = new System.Drawing.Size(100, 20);
-            this.textBox5.TabIndex = 15;
-            this.textBox5.Text = "10";
-            // 
-            // label7
-            // 
-            this.label7.AutoSize = true;
-            this.label7.Location = new System.Drawing.Point(230, 274);
-            this.label7.Name = "label7";
-            this.label7.Size = new System.Drawing.Size(167, 13);
-            this.label7.TabIndex = 16;
-            this.label7.Text = "Min contiguous identical row span";
+            this.checkBox4.AutoSize = true;
+            this.checkBox4.Location = new System.Drawing.Point(241, 220);
+            this.checkBox4.Name = "checkBox4";
+            this.checkBox4.Size = new System.Drawing.Size(156, 30);
+            this.checkBox4.TabIndex = 18;
+            this.checkBox4.Text = "Confirm Render from Server\r\n(for testing)";
+            this.checkBox4.UseVisualStyleBackColor = true;
             // 
             // Form1
             // 
@@ -297,6 +321,8 @@
         private System.Windows.Forms.TextBox textBox4;
         private System.Windows.Forms.Label label7;
         private System.Windows.Forms.TextBox textBox5;
+        private System.Windows.Forms.CheckBox checkBox3;
+        private System.Windows.Forms.CheckBox checkBox4;
     }
 }
 
