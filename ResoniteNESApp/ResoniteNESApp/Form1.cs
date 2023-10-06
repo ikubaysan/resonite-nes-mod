@@ -33,9 +33,6 @@ namespace ResoniteNESApp
         public double darkenFactor = 0.0;
         public bool scanlinesEnabled = true;
 
-
-        // Variables for mocking mod
-
         public Form1()
         {
             InitializeComponent();
