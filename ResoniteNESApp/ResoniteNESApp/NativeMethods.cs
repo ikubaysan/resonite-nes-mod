@@ -37,17 +37,18 @@ namespace ResoniteNESApp
             public int Bottom;
         }
 
-
         public static IntPtr FindWindowByTitleSubstring(string titleSubstring)
         {
             IntPtr foundWindowHandle = IntPtr.Zero;
+            string loweredTitleSubstring = titleSubstring.ToLower(); // Convert the substring to lowercase once outside the loop
+
             NativeMethods.EnumWindows((hWnd, lParam) => {
                 int len = NativeMethods.GetWindowTextLength(hWnd);
                 if (len > 0)
                 {
                     StringBuilder windowTitle = new StringBuilder(len + 1);
                     NativeMethods.GetWindowText(hWnd, windowTitle, len + 1);
-                    if (windowTitle.ToString().Contains(titleSubstring))
+                    if (windowTitle.ToString().ToLower().Contains(loweredTitleSubstring)) // Convert window title to lowercase for comparison
                     {
                         foundWindowHandle = hWnd;
                         return false; // Stop the enumeration
@@ -58,6 +59,7 @@ namespace ResoniteNESApp
 
             return foundWindowHandle;
         }
+
 
     }
 }

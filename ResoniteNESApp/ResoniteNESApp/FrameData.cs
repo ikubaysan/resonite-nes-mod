@@ -35,9 +35,9 @@ namespace ResoniteNESApp
         }
 
 
-        static public int[] GeneratePixelDataFromFCEUX(int width, int height, bool forceFullFrame, double brightnessFactor, bool scanlinesEnabled, double darkenFactor)
+        static public int[] GeneratePixelDataFromWindow(string targetWindowTitle, int width, int height, bool forceFullFrame, double brightnessFactor, bool scanlinesEnabled, double darkenFactor)
         {
-            Bitmap bmp = CaptureFCEUXWindow(brightnessFactor, scanlinesEnabled, darkenFactor);
+            Bitmap bmp = CaptureWindow(targetWindowTitle, brightnessFactor, scanlinesEnabled, darkenFactor);
             if (bmp == null)
             {
                 //Console.WriteLine("emulator window not found");
@@ -95,13 +95,13 @@ namespace ResoniteNESApp
             return pixelDataList.ToArray();
         }
 
-        private static Bitmap CaptureFCEUXWindow(double brightnessFactor, bool scanlinesEnabled, double darkenFactor)
+        private static Bitmap CaptureWindow(string targetWindowTitle, double brightnessFactor, bool scanlinesEnabled, double darkenFactor)
         {
-            IntPtr hWnd = NativeMethods.FindWindowByTitleSubstring("FCEUX");
+            IntPtr hWnd = NativeMethods.FindWindowByTitleSubstring(targetWindowTitle);
 
             if (hWnd == IntPtr.Zero)
             {
-                Console.WriteLine("FCEUX window not found");
+                Console.WriteLine("Window with title " + targetWindowTitle + " not found");
                 return null;
             }
 

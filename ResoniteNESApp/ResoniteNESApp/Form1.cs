@@ -20,11 +20,11 @@ namespace ResoniteNESApp
         private Random _random;
         public const int FRAME_WIDTH = 256;
         public const int FRAME_HEIGHT = 240;
-        private int FPS = 24;
+        private int FPS = 30;
 
         private const int PixelDataMemoryMappedFileSize = ((FRAME_WIDTH * FRAME_HEIGHT * 2) + 3) * sizeof(int);
 
-        private int fullFrameInterval = 10 * 1000; // 10 seconds in milliseconds
+        private int fullFrameInterval = 30 * 1000; // 30 seconds in milliseconds
         private DateTime _lastFullFrameTime = DateTime.MinValue;
         private DateTime programStartTime;
         private int[] pixelData;
@@ -32,6 +32,7 @@ namespace ResoniteNESApp
         public static double brightnessFactor = 1.0;
         public double darkenFactor = 0.0;
         public bool scanlinesEnabled = true;
+        public string targetWindowTitle = "FCEUX";
 
         public Form1()
         {
@@ -59,9 +60,6 @@ namespace ResoniteNESApp
 
             if (checkBox3.Checked && !(MemoryMappedFileManager.clientRenderConfirmed())) return;
 
-            if (int.TryParse(textBox6.Text, out int selectedFullFrameInterval) && selectedFullFrameInterval >= 1)
-                fullFrameInterval = selectedFullFrameInterval * 1000;
-
             bool forceFullFrame = false;
             if ((DateTime.Now - _lastFullFrameTime).TotalMilliseconds >= fullFrameInterval)
             {
@@ -71,7 +69,7 @@ namespace ResoniteNESApp
             MemoryMappedFileManager._lastFrameTime = DateTime.Now;
 
             // Generate pixel data
-            pixelData = FrameData.GeneratePixelDataFromFCEUX(FRAME_WIDTH, FRAME_HEIGHT, forceFullFrame, brightnessFactor, scanlinesEnabled, darkenFactor);
+            pixelData = FrameData.GeneratePixelDataFromWindow(targetWindowTitle, FRAME_WIDTH, FRAME_HEIGHT, forceFullFrame, brightnessFactor, scanlinesEnabled, darkenFactor);
             if (pixelData == null) return;
 
             // Write to MemoryMappedFile
@@ -87,7 +85,7 @@ namespace ResoniteNESApp
             MemoryMappedFileManager.ReadPixelDataFromMemoryMappedFile();
             if (MemoryMappedFileManager.readPixelData == null) return;
 
-            if (checkBox5.Checked)
+            if (previewCheckBox.Checked)
             {
                 // Preview is enabled, so convert pixel data to Bitmap and set to PictureBox
                 pictureBox1.Image = FrameData.SetPixelDataToBitmap(FRAME_WIDTH, FRAME_HEIGHT);
@@ -109,7 +107,7 @@ namespace ResoniteNESApp
         private void textBox4_TextChanged(object sender, EventArgs e)
         {
             // We need to use an event handler because we have to update the timer's interval
-            if (int.TryParse(textBox4.Text, out int selectedFPS) && selectedFPS <= 60 && selectedFPS >= 1)
+            if (int.TryParse(targetFramerateTextBox.Text, out int selectedFPS) && selectedFPS <= 60 && selectedFPS >= 1)
             {
                 FPS = selectedFPS;
                 _timer.Interval = (int)((1.0 / FPS) * 1000); // Update timer's interval here
@@ -122,8 +120,7 @@ namespace ResoniteNESApp
             // Adjusting brightness of the entire frame
             // A value of 1 means no change. Values > 1 increase brightness, and values < 1 decrease it.
             // 
-            if (!double.TryParse(textBox2.Text, out brightnessFactor) || brightnessFactor < 0 || brightnessFactor > 2.0) return;
-
+            if (!double.TryParse(brightnessTextBox.Text, out brightnessFactor) || brightnessFactor < 0 || brightnessFactor > 2.0) return;
         }
 
         private void textBox3_TextChanged(object sender, EventArgs e)
@@ -138,7 +135,7 @@ namespace ResoniteNESApp
 
         private void checkBox2_CheckedChanged(object sender, EventArgs e)
         {
-            if (checkBox2.Checked)
+            if (scanlinesEnabledCheckBox.Checked)
             {
                 scanlinesEnabled = true;
                 // Scanlines are enabled
@@ -155,6 +152,17 @@ namespace ResoniteNESApp
                 darkenFactor = 0.0;
                 textBox3.Text = "0.0";
             }
+        }
+
+        private void textBox1_TextChanged(object sender, EventArgs e)
+        {
+            targetWindowTitle = textBox1.Text;
+        }
+
+        private void textBox6_TextChanged(object sender, EventArgs e)
+        {
+            if (int.TryParse(textBox6.Text, out int selectedFullFrameInterval) && selectedFullFrameInterval >= 1)
+                fullFrameInterval = selectedFullFrameInterval * 1000;
         }
     }
 }

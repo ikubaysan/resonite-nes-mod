@@ -37,22 +37,23 @@
             this.label1 = new System.Windows.Forms.Label();
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.tabPage1 = new System.Windows.Forms.TabPage();
-            this.checkBox5 = new System.Windows.Forms.CheckBox();
+            this.previewCheckBox = new System.Windows.Forms.CheckBox();
             this.label8 = new System.Windows.Forms.Label();
             this.textBox6 = new System.Windows.Forms.TextBox();
             this.checkBox4 = new System.Windows.Forms.CheckBox();
             this.checkBox3 = new System.Windows.Forms.CheckBox();
             this.label6 = new System.Windows.Forms.Label();
-            this.textBox4 = new System.Windows.Forms.TextBox();
+            this.targetFramerateTextBox = new System.Windows.Forms.TextBox();
             this.label5 = new System.Windows.Forms.Label();
             this.label4 = new System.Windows.Forms.Label();
             this.textBox3 = new System.Windows.Forms.TextBox();
-            this.textBox2 = new System.Windows.Forms.TextBox();
-            this.checkBox2 = new System.Windows.Forms.CheckBox();
+            this.brightnessTextBox = new System.Windows.Forms.TextBox();
+            this.scanlinesEnabledCheckBox = new System.Windows.Forms.CheckBox();
             this.label3 = new System.Windows.Forms.Label();
             this.checkBox1 = new System.Windows.Forms.CheckBox();
             this.label2 = new System.Windows.Forms.Label();
             this.tabPage2 = new System.Windows.Forms.TabPage();
+            this.label7 = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             this.tabControl1.SuspendLayout();
             this.tabPage1.SuspendLayout();
@@ -60,10 +61,12 @@
             // 
             // textBox1
             // 
-            this.textBox1.Location = new System.Drawing.Point(39, 158);
+            this.textBox1.Location = new System.Drawing.Point(125, 375);
             this.textBox1.Name = "textBox1";
             this.textBox1.Size = new System.Drawing.Size(100, 20);
             this.textBox1.TabIndex = 0;
+            this.textBox1.Text = "FCEUX";
+            this.textBox1.TextChanged += new System.EventHandler(this.textBox1_TextChanged);
             // 
             // contextMenuStrip1
             // 
@@ -115,18 +118,19 @@
             // 
             // tabPage1
             // 
-            this.tabPage1.Controls.Add(this.checkBox5);
+            this.tabPage1.Controls.Add(this.label7);
+            this.tabPage1.Controls.Add(this.previewCheckBox);
             this.tabPage1.Controls.Add(this.label8);
             this.tabPage1.Controls.Add(this.textBox6);
             this.tabPage1.Controls.Add(this.checkBox4);
             this.tabPage1.Controls.Add(this.checkBox3);
             this.tabPage1.Controls.Add(this.label6);
-            this.tabPage1.Controls.Add(this.textBox4);
+            this.tabPage1.Controls.Add(this.targetFramerateTextBox);
             this.tabPage1.Controls.Add(this.label5);
             this.tabPage1.Controls.Add(this.label4);
             this.tabPage1.Controls.Add(this.textBox3);
-            this.tabPage1.Controls.Add(this.textBox2);
-            this.tabPage1.Controls.Add(this.checkBox2);
+            this.tabPage1.Controls.Add(this.brightnessTextBox);
+            this.tabPage1.Controls.Add(this.scanlinesEnabledCheckBox);
             this.tabPage1.Controls.Add(this.label3);
             this.tabPage1.Controls.Add(this.checkBox1);
             this.tabPage1.Controls.Add(this.label2);
@@ -145,15 +149,15 @@
             // 
             // checkBox5
             // 
-            this.checkBox5.AutoSize = true;
-            this.checkBox5.Checked = true;
-            this.checkBox5.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.checkBox5.Location = new System.Drawing.Point(501, 309);
-            this.checkBox5.Name = "checkBox5";
-            this.checkBox5.Size = new System.Drawing.Size(65, 30);
-            this.checkBox5.TabIndex = 21;
-            this.checkBox5.Text = "Preview\r\nEnabled";
-            this.checkBox5.UseVisualStyleBackColor = true;
+            this.previewCheckBox.AutoSize = true;
+            this.previewCheckBox.Checked = true;
+            this.previewCheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.previewCheckBox.Location = new System.Drawing.Point(501, 309);
+            this.previewCheckBox.Name = "checkBox5";
+            this.previewCheckBox.Size = new System.Drawing.Size(65, 30);
+            this.previewCheckBox.TabIndex = 21;
+            this.previewCheckBox.Text = "Preview\r\nEnabled";
+            this.previewCheckBox.UseVisualStyleBackColor = true;
             // 
             // label8
             // 
@@ -171,6 +175,7 @@
             this.textBox6.Size = new System.Drawing.Size(100, 20);
             this.textBox6.TabIndex = 19;
             this.textBox6.Text = "30";
+            this.textBox6.TextChanged += new System.EventHandler(this.textBox6_TextChanged);
             // 
             // checkBox4
             // 
@@ -195,7 +200,7 @@
             // label6
             // 
             this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(262, 337);
+            this.label6.Location = new System.Drawing.Point(262, 347);
             this.label6.Name = "label6";
             this.label6.Size = new System.Drawing.Size(88, 13);
             this.label6.TabIndex = 14;
@@ -203,12 +208,12 @@
             // 
             // textBox4
             // 
-            this.textBox4.Location = new System.Drawing.Point(265, 375);
-            this.textBox4.Name = "textBox4";
-            this.textBox4.Size = new System.Drawing.Size(100, 20);
-            this.textBox4.TabIndex = 13;
-            this.textBox4.Text = "30";
-            this.textBox4.TextChanged += new System.EventHandler(this.textBox4_TextChanged);
+            this.targetFramerateTextBox.Location = new System.Drawing.Point(265, 375);
+            this.targetFramerateTextBox.Name = "textBox4";
+            this.targetFramerateTextBox.Size = new System.Drawing.Size(100, 20);
+            this.targetFramerateTextBox.TabIndex = 13;
+            this.targetFramerateTextBox.Text = "30";
+            this.targetFramerateTextBox.TextChanged += new System.EventHandler(this.textBox4_TextChanged);
             // 
             // label5
             // 
@@ -222,7 +227,7 @@
             // label4
             // 
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(445, 347);
+            this.label4.Location = new System.Drawing.Point(439, 347);
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(56, 13);
             this.label4.TabIndex = 11;
@@ -239,25 +244,25 @@
             // 
             // textBox2
             // 
-            this.textBox2.Location = new System.Drawing.Point(420, 375);
-            this.textBox2.Name = "textBox2";
-            this.textBox2.Size = new System.Drawing.Size(100, 20);
-            this.textBox2.TabIndex = 9;
-            this.textBox2.Text = "1";
-            this.textBox2.TextChanged += new System.EventHandler(this.textBox2_TextChanged);
+            this.brightnessTextBox.Location = new System.Drawing.Point(420, 375);
+            this.brightnessTextBox.Name = "textBox2";
+            this.brightnessTextBox.Size = new System.Drawing.Size(100, 20);
+            this.brightnessTextBox.TabIndex = 9;
+            this.brightnessTextBox.Text = "1";
+            this.brightnessTextBox.TextChanged += new System.EventHandler(this.textBox2_TextChanged);
             // 
             // checkBox2
             // 
-            this.checkBox2.AutoSize = true;
-            this.checkBox2.Checked = true;
-            this.checkBox2.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.checkBox2.Location = new System.Drawing.Point(581, 308);
-            this.checkBox2.Name = "checkBox2";
-            this.checkBox2.Size = new System.Drawing.Size(72, 17);
-            this.checkBox2.TabIndex = 8;
-            this.checkBox2.Text = "Scanlines";
-            this.checkBox2.UseVisualStyleBackColor = true;
-            this.checkBox2.CheckedChanged += new System.EventHandler(this.checkBox2_CheckedChanged);
+            this.scanlinesEnabledCheckBox.AutoSize = true;
+            this.scanlinesEnabledCheckBox.Checked = true;
+            this.scanlinesEnabledCheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.scanlinesEnabledCheckBox.Location = new System.Drawing.Point(581, 308);
+            this.scanlinesEnabledCheckBox.Name = "checkBox2";
+            this.scanlinesEnabledCheckBox.Size = new System.Drawing.Size(72, 30);
+            this.scanlinesEnabledCheckBox.TabIndex = 8;
+            this.scanlinesEnabledCheckBox.Text = "Scanlines\r\nEnabled";
+            this.scanlinesEnabledCheckBox.UseVisualStyleBackColor = true;
+            this.scanlinesEnabledCheckBox.CheckedChanged += new System.EventHandler(this.checkBox2_CheckedChanged);
             // 
             // label3
             // 
@@ -297,6 +302,15 @@
             this.tabPage2.Text = "tabPage2";
             this.tabPage2.UseVisualStyleBackColor = true;
             // 
+            // label7
+            // 
+            this.label7.AutoSize = true;
+            this.label7.Location = new System.Drawing.Point(128, 347);
+            this.label7.Name = "label7";
+            this.label7.Size = new System.Drawing.Size(80, 13);
+            this.label7.TabIndex = 22;
+            this.label7.Text = "Target Window";
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -329,18 +343,19 @@
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.CheckBox checkBox1;
         private System.Windows.Forms.Label label3;
-        private System.Windows.Forms.CheckBox checkBox2;
+        private System.Windows.Forms.CheckBox scanlinesEnabledCheckBox;
         private System.Windows.Forms.Label label5;
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.TextBox textBox3;
-        private System.Windows.Forms.TextBox textBox2;
+        private System.Windows.Forms.TextBox brightnessTextBox;
         private System.Windows.Forms.Label label6;
-        private System.Windows.Forms.TextBox textBox4;
+        private System.Windows.Forms.TextBox targetFramerateTextBox;
         private System.Windows.Forms.CheckBox checkBox3;
         private System.Windows.Forms.CheckBox checkBox4;
         private System.Windows.Forms.Label label8;
         private System.Windows.Forms.TextBox textBox6;
-        private System.Windows.Forms.CheckBox checkBox5;
+        private System.Windows.Forms.CheckBox previewCheckBox;
+        private System.Windows.Forms.Label label7;
     }
 }
 
