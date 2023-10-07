@@ -12,6 +12,8 @@ namespace ResoniteNESApp
 
         private static Dictionary<int, List<int>> rgbToSpans; // Map RGB values to spans
         private static Bitmap _currentBitmap = new Bitmap(Form1.FRAME_WIDTH, Form1.FRAME_HEIGHT);
+        private static IntPtr cachedWindowHandle = IntPtr.Zero;
+        private static string cachedWindowTitle = "";
 
 
         // A helper function to make sure RGB values stay in the 0-255 range
@@ -97,16 +99,46 @@ namespace ResoniteNESApp
 
         private static Bitmap CaptureWindow(string targetWindowTitle, double brightnessFactor, bool scanlinesEnabled, double darkenFactor)
         {
-            IntPtr hWnd = NativeMethods.FindWindowByTitleSubstring(targetWindowTitle);
+            IntPtr hWnd = IntPtr.Zero;
+            NativeMethods.RECT rect = new NativeMethods.RECT { Top = 0, Left = 0, Right = 0, Bottom = 0 };
+            bool cachedRectSet = false;
 
-            if (hWnd == IntPtr.Zero)
+            // Check if the targetWindowTitle is the same as the cachedWindowTitle
+            if (cachedWindowTitle == targetWindowTitle)
+            {
+                hWnd = cachedWindowHandle;
+
+                // Check if the cached hWnd is still valid (the window is still open)
+                if (NativeMethods.GetWindowRect(hWnd, out rect))
+                {
+                    cachedRectSet = true; 
+                }
+                else 
+                { 
+                    // Window is no longer open. Reset the cached handle and search again.
+                    cachedWindowHandle = IntPtr.Zero;
+                    cachedWindowTitle = "";
+                    hWnd = NativeMethods.FindWindowByTitleSubstring(targetWindowTitle);
+                }
+            }
+            else
+            {
+                hWnd = NativeMethods.FindWindowByTitleSubstring(targetWindowTitle);
+            }
+
+            // If a window handle was found, cache it for next time
+            if (hWnd != IntPtr.Zero)
+            {
+                cachedWindowHandle = hWnd;
+                cachedWindowTitle = targetWindowTitle;
+            }
+            else
             {
                 Console.WriteLine("Window with title " + targetWindowTitle + " not found");
                 return null;
             }
 
-            NativeMethods.RECT rect;
-            NativeMethods.GetWindowRect(hWnd, out rect);
+            if (!cachedRectSet) NativeMethods.GetWindowRect(hWnd, out rect);
 
             // Adjusting for the title bar and borders - these values are just placeholders
             int titleBarHeight = 30;

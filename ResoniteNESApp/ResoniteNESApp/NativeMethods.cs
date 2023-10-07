@@ -15,7 +15,8 @@ namespace ResoniteNESApp
         public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
 
         [DllImport("user32.dll")]
-        public static extern bool GetWindowRect(IntPtr hwnd, out RECT lpRect);
+        // Returns true if successful, false otherwise. Populates lpRect with the rectangle of the window
+        public static extern bool GetWindowRect(IntPtr hwnd, out RECT lpRect); 
 
         [DllImport("user32.dll", SetLastError = true)]
         public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
