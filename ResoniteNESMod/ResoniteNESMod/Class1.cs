@@ -59,16 +59,11 @@ namespace ResoniteNESMod
             canvasSlotHeightCachedConfigOption = Config.GetValue(CANVAS_SLOT_HEIGHT);
             canvasSlotNameCachedConfigOption = Config.GetValue(CANVAS_SLOT_NAME);
             Msg("Updated cached config options");
-            // Print all the cached config options
             Msg("enabledCachedConfigOption: " + enabledCachedConfigOption);
             Msg("canvasSlotWidthCachedConfigOption: " + canvasSlotWidthCachedConfigOption);
             Msg("canvasSlotHeightCachedConfigOption: " + canvasSlotHeightCachedConfigOption);
             Msg("canvasSlotNameCachedConfigOption: " + canvasSlotNameCachedConfigOption);
         }
-
-        // OnAttach() is called whenever a new Canvas is created, but not when I spawn one from Inventory.
-        //[HarmonyPatch(typeof(Canvas), "OnAttach")]
-        [HarmonyPatch(typeof(Canvas), "FinishCanvasUpdate")]  // (many hits, but matched for once)
 
         class ReosoniteNESModPatcher
         {
@@ -89,7 +84,12 @@ namespace ResoniteNESMod
             private static DateTime latestInitializationAttempt = DateTime.MinValue;
             private static bool canvasModificationInProgress = false;
 
+            private static MemoryMappedViewStream _memoryMappedViewStream;
+            private static BinaryReader _binaryReader;
 
+
+            // OnAttach() is called whenever a new Canvas is created, but not when I spawn one from Inventory.
+            // FinishCanvasUpdate() Also hits when I grab the canvas, but it's the only method I could find to detect spawning of a canvas.
             [HarmonyPatch(typeof(Canvas), "FinishCanvasUpdate")]
             public static class CanvasFinishCanvasUpdatePatcher
             {
@@ -170,7 +170,10 @@ namespace ResoniteNESMod
                     // Destroying all the children is expensive, and usually if we get to this point then the next thing that could go wrong
                     // is not being able to find the memory mapped file, so we'll attempt to find the memory mapped file first.
                     readPixelData = new int[canvasSlotWidthCachedConfigOption * canvasSlotHeightCachedConfigOption];
+
                     _memoryMappedFile = MemoryMappedFile.OpenExisting(MemoryMappedFileName);
+                    _memoryMappedViewStream = _memoryMappedFile.CreateViewStream();
+                    _binaryReader = new BinaryReader(_memoryMappedViewStream);
                     latestReceivedFrameMillisecondsOffset = -1;
                     Msg("_memoryMappedFile has been newly initialized with " + MemoryMappedFileName);
 
@@ -242,14 +245,27 @@ namespace ResoniteNESMod
                     }
                     _latestCanvasInstance = null;
                     Msg("Set _latestCanvasInstance to null");
+                    CleanupResources();
+                    Msg("Called CleanupResources()");
                 }
+
+                static void CleanupResources()
+                {
+                    _binaryReader?.Dispose();
+                    _binaryReader = null;
+                    _memoryMappedViewStream?.Dispose();
+                    _memoryMappedViewStream = null;
+                    _memoryMappedFile?.Dispose();
+                    _memoryMappedFile = null;
+                }
+
             }
 
 
 
             [HarmonyPatch(typeof(FrooxEngine.Animator), "OnCommonUpdate")]
             public static class AnimatorOnCommonUpdatePatcher
-            { 
+            {
                 public static void Prefix()
                 {
                     if (!initialized || _latestCanvasInstance == null || !enabledCachedConfigOption) return;
@@ -361,34 +377,30 @@ namespace ResoniteNESMod
                             return;
                         }
 
-                        using (MemoryMappedViewStream stream = _memoryMappedFile.CreateViewStream())
-                        using (BinaryReader reader = new BinaryReader(stream))
+                        short status = _binaryReader.ReadInt16();
+                        if (status == 0)
                         {
-                            short status = reader.ReadInt16();
-                            if (status == 0)
-                            {
-                                ////Msg("Data not ready yet");
-                                readPixelDataLength = -1;
-                                return;
-                            }
+                            ////Msg("Data not ready yet");
+                            readPixelDataLength = -1;
+                            return;
+                        }
 
-                            int millisecondsOffset = reader.ReadInt32();
-                            if (millisecondsOffset == latestReceivedFrameMillisecondsOffset)
-                            {
-                                //Msg("millisecondsOffset of " + millisecondsOffset + " is the same as latestReceivedFrameMillisecondsOffset of " + latestReceivedFrameMillisecondsOffset);
-                                readPixelDataLength = -1;
-                                return;
-                            }
+                        int millisecondsOffset = _binaryReader.ReadInt32();
+                        if (millisecondsOffset == latestReceivedFrameMillisecondsOffset)
+                        {
+                            //Msg("millisecondsOffset of " + millisecondsOffset + " is the same as latestReceivedFrameMillisecondsOffset of " + latestReceivedFrameMillisecondsOffset);
+                            readPixelDataLength = -1;
+                            return;
+                        }
 
-                            latestReceivedFrameMillisecondsOffset = millisecondsOffset;
+                        latestReceivedFrameMillisecondsOffset = millisecondsOffset;
 
-                            readPixelDataLength = reader.ReadInt32();
+                        readPixelDataLength = _binaryReader.ReadInt32();
 
-                            // Now read the pixel data, based on readPixelDataLength
-                            for (int i = 0; i < readPixelDataLength; i++)
-                            {
-                                readPixelData[i] = reader.ReadInt32();
-                            }
+                        // Now read the pixel data, based on readPixelDataLength
+                        for (int i = 0; i < readPixelDataLength; i++)
+                        {
+                            readPixelData[i] = _binaryReader.ReadInt32();
                         }
                     }
                     catch (Exception ex)
