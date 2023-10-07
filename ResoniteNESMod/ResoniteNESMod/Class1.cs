@@ -377,6 +377,9 @@ namespace ResoniteNESMod
                             return;
                         }
 
+                        // Reset the stream position to the beginning
+                        _memoryMappedViewStream.Seek(0, SeekOrigin.Begin);
+
                         short status = _binaryReader.ReadInt16();
                         if (status == 0)
                         {
