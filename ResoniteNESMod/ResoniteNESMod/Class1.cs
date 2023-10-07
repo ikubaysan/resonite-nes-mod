@@ -23,19 +23,25 @@ namespace ResoniteNESMod
 
 
         [AutoRegisterConfigKey]
-        private static readonly ModConfigurationKey<bool> ENABLED = new ModConfigurationKey<bool>("enabled", "Should the mod be enabled?", () => true);
+        private static readonly ModConfigurationKey<bool> ENABLED = new ModConfigurationKey<bool>("enabled", "Enable mod? Setting to false wi", () => true);
         [AutoRegisterConfigKey]
-        private static readonly ModConfigurationKey<int> CANVAS_SLOT_WIDTH = new ModConfigurationKey<int>("canvas_slot_width", "The width of the canvas slot", () => 256);
+        private static readonly ModConfigurationKey<int> CANVAS_SLOT_WIDTH = new ModConfigurationKey<int>("canvas_slot_width", "Pixel width of the canvas slot", () => 256);
         [AutoRegisterConfigKey]
-        private static readonly ModConfigurationKey<int> CANVAS_SLOT_HEIGHT = new ModConfigurationKey<int>("canvas_slot_height", "The height of the canvas slot", () => 240);
+        private static readonly ModConfigurationKey<int> CANVAS_SLOT_HEIGHT = new ModConfigurationKey<int>("canvas_slot_height", "Pixel height of the canvas slot", () => 240);
         [AutoRegisterConfigKey]
-        private static readonly ModConfigurationKey<string> CANVAS_SLOT_NAME = new ModConfigurationKey<string>("canvas_slot_name", "The name of the canvas slot", () => "NESUIXCanvas");
+        private static readonly ModConfigurationKey<string> CANVAS_SLOT_NAME = new ModConfigurationKey<string>("canvas_slot_name", "Name of the canvas slot", () => "NESUIXCanvas");
 
         private static ModConfiguration Config; //If you use config settings, this will be where you interface with them
+
+        private static bool enabledCachedConfigOption;
+        private static int canvasSlotWidthCachedConfigOption;
+        private static int canvasSlotHeightCachedConfigOption;
+        private static string canvasSlotNameCachedConfigOption;
 
         public override void OnEngineInit()
         {
             Config = GetConfiguration(); //Get this mods' current ModConfiguration
+            UpdateCachedConfigOptions();
             Config.Save(true); //If you'd like to save the default config values to file
             Harmony harmony = new Harmony("com.ikubaysan.ResoniteNESMod");
             harmony.PatchAll();
@@ -44,6 +50,20 @@ namespace ResoniteNESMod
             Msg("a regular log from ResoniteNESMod...");
             Warn("a warn log from ResoniteNESMod...");
             Error("an error log from ResoniteNESMod...");
+        }
+
+        private static void UpdateCachedConfigOptions()
+        {
+            enabledCachedConfigOption = Config.GetValue(ENABLED);
+            canvasSlotWidthCachedConfigOption = Config.GetValue(CANVAS_SLOT_WIDTH);
+            canvasSlotHeightCachedConfigOption = Config.GetValue(CANVAS_SLOT_HEIGHT);
+            canvasSlotNameCachedConfigOption = Config.GetValue(CANVAS_SLOT_NAME);
+            Msg("Updated cached config options");
+            // Print all the cached config options
+            Msg("enabledCachedConfigOption: " + enabledCachedConfigOption);
+            Msg("canvasSlotWidthCachedConfigOption: " + canvasSlotWidthCachedConfigOption);
+            Msg("canvasSlotHeightCachedConfigOption: " + canvasSlotHeightCachedConfigOption);
+            Msg("canvasSlotNameCachedConfigOption: " + canvasSlotNameCachedConfigOption);
         }
 
         // OnAttach() is called whenever a new Canvas is created, but not when I spawn one from Inventory.
@@ -67,20 +87,13 @@ namespace ResoniteNESMod
             private static MemoryMappedFile _clientRenderConfirmationMemoryMappedFile;
             private static int latestReceivedFrameMillisecondsOffset = -1;
             private static DateTime latestInitializationAttempt = DateTime.MinValue;
+
             static void Postfix(Canvas __instance)
             {
-                if (!Config.GetValue(ENABLED))
-                { 
-                    if (initialized)
-                    {
-                        initialized = false;
-                        Msg("Set initialized to false because mod became disabled while initialized was true");
-                    }
-                    return;
-                }
-                if (__instance.Slot.Name != Config.GetValue(CANVAS_SLOT_NAME)) return;
-                _latestCanvasInstance = __instance;
+                if (!enabledCachedConfigOption) return;
 
+                if (__instance.Slot.Name != canvasSlotNameCachedConfigOption) return;
+                _latestCanvasInstance = __instance;
 
                 if (!initialized)
                 {
@@ -104,9 +117,9 @@ namespace ResoniteNESMod
             static void InitializeCanvas(Canvas __instance)
             {
                 // Retrieve the values of configuration keys at the time the method is called
-                int canvasSlotWidth = Config.GetValue(CANVAS_SLOT_WIDTH);
-                int canvasSlotHeight = Config.GetValue(CANVAS_SLOT_HEIGHT);
-                string canvasSlotName = Config.GetValue(CANVAS_SLOT_NAME);
+                int canvasSlotWidth = canvasSlotWidthCachedConfigOption;
+                int canvasSlotHeight = canvasSlotHeightCachedConfigOption;
+                string canvasSlotName = canvasSlotNameCachedConfigOption;
 
                 // Slot name matches the constant
                 Msg("Matched with the slot name: " + __instance.Slot.Name);
@@ -145,7 +158,7 @@ namespace ResoniteNESMod
 
                 // Destroying all the children is expensive, and usually if we get to this point then the next thing that could go wrong
                 // is not being able to find the memory mapped file, so we'll attempt to find the memory mapped file first.
-                readPixelData = new int[Config.GetValue(CANVAS_SLOT_WIDTH) * Config.GetValue(CANVAS_SLOT_HEIGHT)];
+                readPixelData = new int[canvasSlotWidthCachedConfigOption * canvasSlotHeightCachedConfigOption];
                 _memoryMappedFile = MemoryMappedFile.OpenExisting(MemoryMappedFileName);
                 latestReceivedFrameMillisecondsOffset = -1;
                 Msg("_memoryMappedFile has been newly initialized with " + MemoryMappedFileName);
@@ -315,9 +328,9 @@ namespace ResoniteNESMod
             { 
                 public static void Prefix()
                 {
-                    if (!initialized || _latestCanvasInstance == null) return;
+                    if (!initialized || _latestCanvasInstance == null || !enabledCachedConfigOption) return;
 
-                    if (readPixelDataLength == -1 && Config.GetValue(ENABLED))
+                    if (readPixelDataLength == -1 && enabledCachedConfigOption)
                     {
                         ReadFromMemoryMappedFile();
                         // This can happen if ReadFromMemoryMappedFile() raised an exception
@@ -330,6 +343,7 @@ namespace ResoniteNESMod
                     }
                     catch (Exception e)
                     {
+                        // This will also hit if the canvas was deleted.
                         Error("Failed to update frame for initialized canvas " + _latestCanvasInstance.Slot.Name);
                         Error(e.ToString());
                         initialized = false;
@@ -339,6 +353,15 @@ namespace ResoniteNESMod
                     }
                     readPixelDataLength = -1;
                     return;
+                }
+            }
+
+            [HarmonyPatch(typeof(ResoniteModLoader.ModConfiguration), "FireConfigurationChangedEvent")]
+            public static class FireConfigurationChangedEventPatcher
+            {
+                public static void Postfix()
+                {
+                    UpdateCachedConfigOptions();
                 }
             }
         }

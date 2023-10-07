@@ -40,7 +40,7 @@ namespace ResoniteNESApp
             Bitmap bmp = CaptureFCEUXWindow(brightnessFactor, scanlinesEnabled, darkenFactor);
             if (bmp == null)
             {
-                Console.WriteLine("emulator window not found");
+                //Console.WriteLine("emulator window not found");
                 return null;
             }
 

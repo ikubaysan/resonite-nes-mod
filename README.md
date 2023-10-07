@@ -28,3 +28,13 @@ There are much more optimal ways of representing this, but keeping things simple
 ## Creating a Canvas
 Since we're patching the FrooxEngine.Animator.OnCommonUpdate() method, there must be an Animator component somewhere in the world for this method to hit. 
 Therefore, it's best to just attach an empty Animator component to the root of the canvas.
+
+
+
+
+## How to run
+* Start FCEUX
+* Run controller python script
+* Run ResoniteNESApp
+* Load Resonite with mod
+* Spawn a NESUIXCanvas
