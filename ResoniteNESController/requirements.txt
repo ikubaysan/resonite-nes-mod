@@ -1,3 +1,5 @@
 websockets~=11.0.3
 keyboard~=0.13.5
 pyvjoy~=1.0.1
+websocket-server
+websocket-client

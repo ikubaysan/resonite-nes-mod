@@ -60,21 +60,24 @@ namespace ResoniteNESMod
             private static HorizontalLayout[] horizontalLayoutComponentCache;
             private static int[] readPixelData;
             private static int readPixelDataLength = -1;
-            private static MemoryMappedViewStream _memoryMappedViewStream;
-            private static BinaryReader _pixelDataBinaryReader;
             private static Dictionary<int, colorX> colorCache = new Dictionary<int, colorX>();
-            private static bool forceRefreshedFrameFromMMF;
 
             private const string ClientRenderConfirmationMemoryMappedFileName = "ResoniteClientRenderConfirmation";
-            private const int ClientRenderConfirmationMemoryMappedFileSize = sizeof(int);
+            private const int ClientRenderConfirmationMemoryMappedFileSize = sizeof(Int32);
             private static MemoryMappedFile _clientRenderConfirmationMemoryMappedFile;
             private static int latestReceivedFrameMillisecondsOffset = -1;
             private static DateTime latestInitializationAttempt = DateTime.MinValue;
-            private static int ConsecutiveSetPixelDataToCanvasCalls = 0;
-
             static void Postfix(Canvas __instance)
             {
-                if (!Config.GetValue(ENABLED)) return;
+                if (!Config.GetValue(ENABLED))
+                { 
+                    if (initialized)
+                    {
+                        initialized = false;
+                        Msg("Set initialized to false because mod became disabled while initialized was true");
+                    }
+                    return;
+                }
                 if (__instance.Slot.Name != Config.GetValue(CANVAS_SLOT_NAME)) return;
                 _latestCanvasInstance = __instance;
 
@@ -144,8 +147,6 @@ namespace ResoniteNESMod
                 // is not being able to find the memory mapped file, so we'll attempt to find the memory mapped file first.
                 readPixelData = new int[Config.GetValue(CANVAS_SLOT_WIDTH) * Config.GetValue(CANVAS_SLOT_HEIGHT)];
                 _memoryMappedFile = MemoryMappedFile.OpenExisting(MemoryMappedFileName);
-                _memoryMappedViewStream = _memoryMappedFile.CreateViewStream();
-                _pixelDataBinaryReader = new BinaryReader(_memoryMappedViewStream);
                 latestReceivedFrameMillisecondsOffset = -1;
                 Msg("_memoryMappedFile has been newly initialized with " + MemoryMappedFileName);
 
@@ -262,51 +263,42 @@ namespace ResoniteNESMod
             {
                 try
                 {
-                    _memoryMappedViewStream.Position = 0;
-
-                    if (_pixelDataBinaryReader == null)
+                    if (_memoryMappedFile == null)
                     {
-                        Console.WriteLine("Binary reader not initialized");
+                        Error("MemoryMappedFile not initialized");
                         readPixelDataLength = -1;
                         return;
                     }
 
-                    short status = _pixelDataBinaryReader.ReadInt16();
-                    if (status == 0)
+                    using (MemoryMappedViewStream stream = _memoryMappedFile.CreateViewStream())
+                    using (BinaryReader reader = new BinaryReader(stream))
                     {
-                        // The data is not ready yet
-                        readPixelDataLength = -1;
-                        return;
+                        short status = reader.ReadInt16();
+                        if (status == 0)
+                        {
+                            ////Msg("Data not ready yet");
+                            readPixelDataLength = -1;
+                            return;
+                        }
+
+                        int millisecondsOffset = reader.ReadInt32();
+                        if (millisecondsOffset == latestReceivedFrameMillisecondsOffset)
+                        {
+                            //Msg("millisecondsOffset of " + millisecondsOffset + " is the same as latestReceivedFrameMillisecondsOffset of " + latestReceivedFrameMillisecondsOffset);
+                            readPixelDataLength = -1;
+                            return;
+                        }
+
+                        latestReceivedFrameMillisecondsOffset = millisecondsOffset;
+
+                        readPixelDataLength = reader.ReadInt32();
+
+                        // Now read the pixel data, based on readPixelDataLength
+                        for (int i = 0; i < readPixelDataLength; i++)
+                        {
+                            readPixelData[i] = reader.ReadInt32();
+                        }
                     }
-
-                    int millisecondsOffset = _pixelDataBinaryReader.ReadInt32();
-                    if (millisecondsOffset == latestReceivedFrameMillisecondsOffset)
-                    {
-                        readPixelDataLength = -1;
-                        return;
-                    }
-
-                    if (millisecondsOffset < 0)
-                    {
-                        // If the 1st 32-bit int is negative, that indicates that the frame is force refreshed
-                        forceRefreshedFrameFromMMF = true;
-                    }
-                    else
-                    {
-                        forceRefreshedFrameFromMMF = false;
-                    }
-
-                    latestReceivedFrameMillisecondsOffset = millisecondsOffset;
-
-                    readPixelDataLength = _pixelDataBinaryReader.ReadInt32();
-
-                    // Now read the pixel data, based on readPixelDataLength
-                    for (int i = 0; i < readPixelDataLength; i++)
-                    {
-                        readPixelData[i] = _pixelDataBinaryReader.ReadInt32();
-                    }
-
-                    _memoryMappedViewStream.Position = 0;
                 }
                 catch (Exception ex)
                 {
@@ -314,14 +306,13 @@ namespace ResoniteNESMod
                     Msg($"readPixelDataLength: {readPixelDataLength}");
                     Msg($"Length of readPixelData array: {readPixelData.Length}");
                     readPixelDataLength = -1;
-                    _memoryMappedViewStream.Position = 0;
                 }
             }
 
 
             [HarmonyPatch(typeof(FrooxEngine.Animator), "OnCommonUpdate")]
             public static class AnimatorOnCommonUpdatePatcher
-            {
+            { 
                 public static void Prefix()
                 {
                     if (!initialized || _latestCanvasInstance == null) return;

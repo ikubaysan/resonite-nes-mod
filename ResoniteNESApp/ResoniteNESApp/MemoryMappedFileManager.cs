@@ -123,56 +123,56 @@ namespace ResoniteNESApp
         {
             try
             {
-                if (_pixelDataBinaryReader == null)
+                if (_pixelDataMemoryMappedFile == null)
                 {
-                    Console.WriteLine("Binary reader not initialized");
+                    Console.WriteLine("MemoryMappedFile not initialized");
                     readPixelDataLength = -1;
                     return;
                 }
 
-
-                short status = _pixelDataBinaryReader.ReadInt16();
-                if (status == 0)
+                using (MemoryMappedViewStream stream = _pixelDataMemoryMappedFile.CreateViewStream())
+                using (BinaryReader reader = new BinaryReader(stream))
                 {
-                    // The data is not ready yet
-                    readPixelDataLength = -1;
-                    return;
+                    short status = reader.ReadInt16();
+                    if (status == 0)
+                    {
+                        // The data is not ready yet
+                        readPixelDataLength = -1;
+                        return;
+                    }
+
+                    int millisecondsOffset = reader.ReadInt32();
+                    if (millisecondsOffset == latestReceivedFrameMillisecondsOffset)
+                    {
+                        readPixelDataLength = -1;
+                        return;
+                    }
+
+                    if (millisecondsOffset < 0)
+                    {
+                        // If the 1st 32-bit int is negative, that indicates that the frame is force refreshed
+                        forceRefreshedFrameFromMMF = true;
+                    }
+                    else
+                    {
+                        forceRefreshedFrameFromMMF = false;
+                    }
+
+                    latestReceivedFrameMillisecondsOffset = millisecondsOffset;
+
+                    readPixelDataLength = reader.ReadInt32();
+
+                    // Now read the pixel data, based on readPixelDataLength
+                    for (int i = 0; i < readPixelDataLength; i++)
+                    {
+                        readPixelData[i] = reader.ReadInt32();
+                    }
                 }
-
-                int millisecondsOffset = _pixelDataBinaryReader.ReadInt32();
-                if (millisecondsOffset == latestReceivedFrameMillisecondsOffset)
-                {
-                    readPixelDataLength = -1;
-                    return;
-                }
-
-                if (millisecondsOffset < 0)
-                {
-                    // If the 1st 32-bit int is negative, that indicates that the frame is force refreshed
-                    forceRefreshedFrameFromMMF = true;
-                }
-                else
-                {
-                    forceRefreshedFrameFromMMF = false;
-                }
-
-                latestReceivedFrameMillisecondsOffset = millisecondsOffset;
-
-                readPixelDataLength = _pixelDataBinaryReader.ReadInt32();
-
-                // Now read the pixel data, based on readPixelDataLength
-                for (int i = 0; i < readPixelDataLength; i++)
-                {
-                    readPixelData[i] = _pixelDataBinaryReader.ReadInt32();
-                }
-
-                _pixelDataMemoryMappedViewStream.Position = 0;
             }
             catch (Exception ex)
             {
                 Console.WriteLine("Error reading from MemoryMappedFile: " + ex.Message);
                 readPixelDataLength = -1;
-                _pixelDataMemoryMappedViewStream.Position = 0;
             }
         }
     }
