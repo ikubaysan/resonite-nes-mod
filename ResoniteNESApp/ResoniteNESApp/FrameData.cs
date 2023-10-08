@@ -16,7 +16,7 @@ namespace ResoniteNESApp
         private static string cachedWindowTitle = "";
 
         // Variables for GeneratePixelDataFromWindow()
-
+        private static Dictionary<int, List<int>> cachedPackedValues = new Dictionary<int, List<int>>();
 
         // A helper function to make sure RGB values stay in the 0-255 range
         private static int Clamp(int value, int min, int max)
@@ -62,7 +62,9 @@ namespace ResoniteNESApp
                     pixel = bmp.GetPixel(x, y);
                     currentPixel = _currentBitmap.GetPixel(x, y);
 
-                    if (forceFullFrame || !currentPixel.Equals(pixel))
+                    //if (forceFullFrame || !currentPixel.Equals(pixel))
+                    // If the pixel is different from the previous frame, add it to the pixel data
+                    if (forceFullFrame || currentPixel.R != pixel.R || currentPixel.G != pixel.G || currentPixel.B != pixel.B)
                     {
                         spanStart = x;
                         packedRGB = PackXYZ(pixel.R, pixel.G, pixel.B);
