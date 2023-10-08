@@ -255,7 +255,7 @@ namespace ResoniteNESApp
                     for (int x = xStart; x < xStart + spanLength; x++)
                     {
                         Color newPixelColor = Color.FromArgb(R, G, B);
-                        //Color newPixelColor = _allColors[GetColorIndex(R, G, B)];
+                        //Color newPixelColor = _allColors[GetIndexFromColor(R, G, B)];
                         _currentBitmap.SetPixel(x, y, newPixelColor);
                         nPixelsChanged++;
                     }
