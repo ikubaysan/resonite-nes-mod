@@ -26,7 +26,11 @@ def on_message(client, server, message):
     print(f"Received message '{message}' from Client({client['id']})")
 
     btn_name = message[0]
-    action = int(message[1])  # Convert string to int
+    try:
+        action = int(message[1])  # Convert string to int
+    except ValueError:
+        print(f"Invalid message '{message}'")
+        return
 
     if btn_name in BUTTON_MAP:
         vj.set_button(BUTTON_MAP[btn_name], action)

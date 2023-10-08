@@ -20,7 +20,7 @@ namespace ResoniteNESApp
         private Random _random;
         public const int FRAME_WIDTH = 256;
         public const int FRAME_HEIGHT = 240;
-        private int FPS = 30;
+        private int TargetFramerate = 30;
 
         private const int PixelDataMemoryMappedFileSize = ((FRAME_WIDTH * FRAME_HEIGHT * 2) + 3) * sizeof(int);
 
@@ -33,6 +33,10 @@ namespace ResoniteNESApp
         public double darkenFactor = 0.0;
         public bool scanlinesEnabled = true;
         public string targetWindowTitle = "FCEUX";
+        private int titleBarHeight = 30;
+
+        private int _frameCounter = 0;
+        private Timer _fpsTimer;
 
         public Form1()
         {
@@ -44,14 +48,25 @@ namespace ResoniteNESApp
         private void Form1_Load(object sender, EventArgs e)
         {
             _timer = new Timer();
-            _timer.Interval = (int)((1.0 / FPS) * 1000);
+            _timer.Interval = (int)((1.0 / TargetFramerate) * 1000);
             _timer.Tick += Timer_Tick;
             _timer.Start();
+
+            _fpsTimer = new Timer();
+            _fpsTimer.Interval = 1000;  // 1 second
+            _fpsTimer.Tick += FpsTimer_Tick;
+            _fpsTimer.Start();
 
             pictureBox1.Width = FRAME_WIDTH;
             pictureBox1.Height = FRAME_HEIGHT;
 
             Console.WriteLine("Form loaded with Timer Interval: " + _timer.Interval);
+        }
+
+        private void FpsTimer_Tick(object sender, EventArgs e)
+        {
+            Console.WriteLine($"Published FPS: {_frameCounter}");
+            _frameCounter = 0;  // Reset the counter
         }
 
         private void Timer_Tick(object sender, EventArgs e)
@@ -69,7 +84,7 @@ namespace ResoniteNESApp
             MemoryMappedFileManager._lastFrameTime = DateTime.Now;
 
             // Generate pixel data
-            pixelData = FrameData.GeneratePixelDataFromWindow(targetWindowTitle, FRAME_WIDTH, FRAME_HEIGHT, forceFullFrame, brightnessFactor, scanlinesEnabled, darkenFactor);
+            pixelData = FrameData.GeneratePixelDataFromWindow(targetWindowTitle, titleBarHeight,  FRAME_WIDTH, FRAME_HEIGHT, forceFullFrame, brightnessFactor, scanlinesEnabled, darkenFactor);
             if (pixelData == null) return;
 
             // Write to MemoryMappedFile
@@ -94,8 +109,9 @@ namespace ResoniteNESApp
             if (checkBox4.Checked)
             {
                 MemoryMappedFileManager.WriteLatestReceivedFrameMillisecondsOffsetToMemoryMappedFile();
-                Console.WriteLine("Confirmation of render from server is enabled, so called WriteLatestReceivedFrameMillisecondsOffsetToMemoryMappedFile()");
+                //Console.WriteLine("Confirmation of render from server is enabled, so called WriteLatestReceivedFrameMillisecondsOffsetToMemoryMappedFile()");
             }
+            _frameCounter++;
         }
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
@@ -107,11 +123,11 @@ namespace ResoniteNESApp
         private void textBox4_TextChanged(object sender, EventArgs e)
         {
             // We need to use an event handler because we have to update the timer's interval
-            if (int.TryParse(targetFramerateTextBox.Text, out int selectedFPS) && selectedFPS <= 60 && selectedFPS >= 1)
+            if (int.TryParse(targetFramerateTextBox.Text, out int selectedTargetFramerate) && selectedTargetFramerate <= 60 && selectedTargetFramerate >= 1)
             {
-                FPS = selectedFPS;
-                _timer.Interval = (int)((1.0 / FPS) * 1000); // Update timer's interval here
-                Console.WriteLine("FPS changed to " + FPS + " and Timer Interval set to " + _timer.Interval);
+                TargetFramerate = selectedTargetFramerate;
+                _timer.Interval = (int)((1.0 / TargetFramerate) * 1000); // Update timer's interval here
+                Console.WriteLine("TargetFramerate changed to " + TargetFramerate + " and Timer Interval set to " + _timer.Interval);
             }
         }
 
@@ -163,6 +179,12 @@ namespace ResoniteNESApp
         {
             if (int.TryParse(textBox6.Text, out int selectedFullFrameInterval) && selectedFullFrameInterval >= 1)
                 fullFrameInterval = selectedFullFrameInterval * 1000;
+        }
+
+        private void textBox2_TextChanged_1(object sender, EventArgs e)
+        {
+            if (int.TryParse(textBox2.Text, out int selectedtitleBarHeight) && selectedtitleBarHeight >= 1)
+                titleBarHeight = selectedtitleBarHeight;
         }
     }
 }

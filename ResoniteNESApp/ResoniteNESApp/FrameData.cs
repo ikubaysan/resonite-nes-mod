@@ -37,9 +37,9 @@ namespace ResoniteNESApp
         }
 
 
-        static public int[] GeneratePixelDataFromWindow(string targetWindowTitle, int width, int height, bool forceFullFrame, double brightnessFactor, bool scanlinesEnabled, double darkenFactor)
+        static public int[] GeneratePixelDataFromWindow(string targetWindowTitle, int titleBarHeight, int width, int height, bool forceFullFrame, double brightnessFactor, bool scanlinesEnabled, double darkenFactor)
         {
-            Bitmap bmp = CaptureWindow(targetWindowTitle, brightnessFactor, scanlinesEnabled, darkenFactor);
+            Bitmap bmp = CaptureWindow(targetWindowTitle, titleBarHeight, brightnessFactor, scanlinesEnabled, darkenFactor);
             if (bmp == null)
             {
                 //Console.WriteLine("emulator window not found");
@@ -97,7 +97,7 @@ namespace ResoniteNESApp
             return pixelDataList.ToArray();
         }
 
-        private static Bitmap CaptureWindow(string targetWindowTitle, double brightnessFactor, bool scanlinesEnabled, double darkenFactor)
+        private static Bitmap CaptureWindow(string targetWindowTitle, int titleBarHeight, double brightnessFactor, bool scanlinesEnabled, double darkenFactor)
         {
             IntPtr hWnd = IntPtr.Zero;
             NativeMethods.RECT rect = new NativeMethods.RECT { Top = 0, Left = 0, Right = 0, Bottom = 0 };
@@ -141,7 +141,6 @@ namespace ResoniteNESApp
             if (!cachedRectSet) NativeMethods.GetWindowRect(hWnd, out rect);
 
             // Adjusting for the title bar and borders - these values are just placeholders
-            int titleBarHeight = 30;
             int borderWidth = 8;
 
             int adjustedTop = rect.Top + titleBarHeight;

@@ -23,9 +23,9 @@ namespace ResoniteNESApp
         // Add 3 to account for the 3 ints we write before the pixel data
         public static Int32 latestPublishedFrameMillisecondsOffset;
         public static int readPixelDataLength;
-        private static bool forceRefreshedFrameFromMMF;
         public static DateTime _lastFrameTime = DateTime.MinValue;
         public static int[] readPixelData = new int[Form1.FRAME_WIDTH * Form1.FRAME_HEIGHT];
+        private static bool forceRefreshedFrameFromMMF;
 
         public static bool clientRenderConfirmed()
         {
