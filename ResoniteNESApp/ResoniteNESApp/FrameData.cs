@@ -17,8 +17,37 @@ namespace ResoniteNESApp
         private static IntPtr cachedWindowHandle = IntPtr.Zero;
         private static string cachedWindowTitle = "";
 
-        // Variables for GeneratePixelDataFromWindow()
-        private static Dictionary<int, List<int>> cachedPackedValues = new Dictionary<int, List<int>>();
+        // Fixed size array for all possible RGB values
+        // I actually only need to do this in the mod.
+        private static Color[] _allColors;
+
+        static FrameData()
+        {
+            //initializeAllColors();
+        }
+
+        private static void initializeAllColors()
+        {
+            _allColors = new Color[256 * 256 * 256];
+            // Initialize the fixed size array
+            int index = 0;
+            for (int r = 0; r < 256; r++)
+            {
+                for (int g = 0; g < 256; g++)
+                {
+                    for (int b = 0; b < 256; b++)
+                    {
+                        _allColors[index++] = Color.FromArgb(r, g, b);
+                    }
+                }
+            }
+        }
+
+        static int GetColorIndex(int r, int g, int b)
+        {
+            return r * 256 * 256 + g * 256 + b;
+        }
+
 
         // A helper function to make sure RGB values stay in the 0-255 range
         private static int Clamp(int value, int min, int max)
@@ -130,10 +159,10 @@ namespace ResoniteNESApp
                 // Check if the cached hWnd is still valid (the window is still open)
                 if (NativeMethods.GetWindowRect(hWnd, out rect))
                 {
-                    cachedRectSet = true; 
+                    cachedRectSet = true;
                 }
-                else 
-                { 
+                else
+                {
                     // Window is no longer open. Reset the cached handle and search again.
                     cachedWindowHandle = IntPtr.Zero;
                     cachedWindowTitle = "";
@@ -226,6 +255,7 @@ namespace ResoniteNESApp
                     for (int x = xStart; x < xStart + spanLength; x++)
                     {
                         Color newPixelColor = Color.FromArgb(R, G, B);
+                        //Color newPixelColor = _allColors[GetColorIndex(R, G, B)];
                         _currentBitmap.SetPixel(x, y, newPixelColor);
                         nPixelsChanged++;
                     }
