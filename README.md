@@ -38,3 +38,7 @@ Therefore, it's best to just attach an empty Animator component to the root of t
 * Run ResoniteNESApp
 * Load Resonite with mod
 * Spawn a NESUIXCanvas
+
+
+## FCEUX options
+Config > Enable > Background Input
