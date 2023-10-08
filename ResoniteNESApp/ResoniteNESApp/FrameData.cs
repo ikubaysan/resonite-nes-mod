@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -38,50 +40,60 @@ namespace ResoniteNESApp
             Z = packedXYZ % 1000;
         }
 
-
         static public int[] GeneratePixelDataFromWindow(string targetWindowTitle, int titleBarHeight, int width, int height, bool forceFullFrame, double brightnessFactor, bool scanlinesEnabled, double darkenFactor)
         {
             Bitmap bmp = CaptureWindow(targetWindowTitle, titleBarHeight, brightnessFactor, scanlinesEnabled, darkenFactor);
             if (bmp == null)
             {
-                //Console.WriteLine("emulator window not found");
                 return null;
             }
 
             List<int> pixelDataList = new List<int>();
-            rgbToSpans = new Dictionary<int, List<int>>(); // Map RGB values to spans
-            int x, y, spanStart, packedRGB, spanLength, packedXYZ;
-            Color pixel, currentPixel;
+            rgbToSpans = new Dictionary<int, List<int>>();
 
-            // Processing pixel data
-            for (y = 0; y < height; y++)
+            // Use BitmapData for faster pixel access
+            BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.ReadOnly, bmp.PixelFormat);
+            BitmapData currentBmpData = _currentBitmap.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.ReadOnly, _currentBitmap.PixelFormat);
+
+            int bytesPerPixel = Image.GetPixelFormatSize(bmp.PixelFormat) / 8;
+            byte[] bmpBytes = new byte[width * height * bytesPerPixel];
+            byte[] currentBmpBytes = new byte[width * height * bytesPerPixel];
+
+            Marshal.Copy(bmpData.Scan0, bmpBytes, 0, bmpBytes.Length);
+            Marshal.Copy(currentBmpData.Scan0, currentBmpBytes, 0, currentBmpBytes.Length);
+
+            int length = bmpBytes.Length;
+            int stride = bmpData.Stride;
+
+            for (int y = 0; y < height; y++)
             {
-                x = 0;
-                while (x < width)
+                for (int x = 0; x < width;)
                 {
-                    pixel = bmp.GetPixel(x, y);
-                    currentPixel = _currentBitmap.GetPixel(x, y);
+                    int offset = y * stride + x * bytesPerPixel;
 
-                    //if (forceFullFrame || !currentPixel.Equals(pixel))
-                    // If the pixel is different from the previous frame, add it to the pixel data
+                    Color pixel = Color.FromArgb(bmpBytes[offset + 2], bmpBytes[offset + 1], bmpBytes[offset]);
+                    Color currentPixel = Color.FromArgb(currentBmpBytes[offset + 2], currentBmpBytes[offset + 1], currentBmpBytes[offset]);
+
                     if (forceFullFrame || currentPixel.R != pixel.R || currentPixel.G != pixel.G || currentPixel.B != pixel.B)
                     {
-                        spanStart = x;
-                        packedRGB = PackXYZ(pixel.R, pixel.G, pixel.B);
+                        int spanStart = x;
+                        int packedRGB = PackXYZ(pixel.R, pixel.G, pixel.B);
 
-                        while (x < width && bmp.GetPixel(x, y).ToArgb() == pixel.ToArgb())
+                        while (x < width && bmpBytes[offset + 2] == pixel.R && bmpBytes[offset + 1] == pixel.G && bmpBytes[offset] == pixel.B)
                         {
                             x++;
+                            offset = y * stride + x * bytesPerPixel;
                         }
-                        spanLength = x - spanStart;
 
-                        packedXYZ = PackXYZ(spanStart, y, spanLength);
+                        int spanLength = x - spanStart;
+                        int packedXYZ = PackXYZ(spanStart, y, spanLength);
 
-                        if (!rgbToSpans.ContainsKey(packedRGB))
+                        if (!rgbToSpans.TryGetValue(packedRGB, out var spanList))
                         {
-                            rgbToSpans[packedRGB] = new List<int>();
+                            spanList = new List<int>();
+                            rgbToSpans[packedRGB] = spanList;
                         }
-                        rgbToSpans[packedRGB].Add(packedXYZ);
+                        spanList.Add(packedXYZ);
                     }
                     else
                     {
@@ -90,7 +102,6 @@ namespace ResoniteNESApp
                 }
             }
 
-            // Compile the pixel data in the new format
             foreach (var kvp in rgbToSpans)
             {
                 pixelDataList.Add(kvp.Key);
@@ -98,6 +109,8 @@ namespace ResoniteNESApp
                 pixelDataList.Add(-kvp.Value.Last());
             }
 
+            bmp.UnlockBits(bmpData);
+            _currentBitmap.UnlockBits(currentBmpData);
             bmp.Dispose();
 
             return pixelDataList.ToArray();
