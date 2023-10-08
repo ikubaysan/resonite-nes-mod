@@ -38,6 +38,8 @@ namespace ResoniteNESApp
         private int _frameCounter = 0;
         private Timer _fpsTimer;
 
+        private DateTime _lastTickTime = DateTime.Now;
+
         public Form1()
         {
             InitializeComponent();
@@ -76,6 +78,8 @@ namespace ResoniteNESApp
 
             if (checkBox3.Checked && !(MemoryMappedFileManager.clientRenderConfirmed())) return;
 
+            var startTickTime = DateTime.Now;
+
             bool forceFullFrame = false;
             if ((DateTime.Now - _lastFullFrameTime).TotalMilliseconds >= fullFrameInterval)
             {
@@ -113,6 +117,16 @@ namespace ResoniteNESApp
                 //Console.WriteLine("Confirmation of render from server is enabled, so called WriteLatestReceivedFrameMillisecondsOffsetToMemoryMappedFile()");
             }
             _frameCounter++;
+
+            var endTickTime = DateTime.Now;
+            var executionTime = (endTickTime - startTickTime).TotalMilliseconds;
+
+            // Set the next timer tick interval. We want to subtract the execution time of this function from the interval to make sure we're publishing near the target framerate
+            // The Math.Max() call is to ensure that the interval is never less than 1 millisecond. This happens if the execution time is greater than the target framerate.
+            _timer.Interval = Math.Max(1, (int)((1.0 / TargetFramerate) * 1000) - (int)executionTime);
+
+            _lastTickTime = endTickTime; // Update the last tick time
+
         }
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
