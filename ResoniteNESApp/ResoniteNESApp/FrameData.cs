@@ -15,6 +15,8 @@ namespace ResoniteNESApp
         private static IntPtr cachedWindowHandle = IntPtr.Zero;
         private static string cachedWindowTitle = "";
 
+        // Variables for GeneratePixelDataFromWindow()
+
 
         // A helper function to make sure RGB values stay in the 0-255 range
         private static int Clamp(int value, int min, int max)
@@ -48,28 +50,30 @@ namespace ResoniteNESApp
 
             List<int> pixelDataList = new List<int>();
             rgbToSpans = new Dictionary<int, List<int>>(); // Map RGB values to spans
+            int x, y, spanStart, packedRGB, spanLength, packedXYZ;
+            Color pixel, currentPixel;
 
             // Processing pixel data
-            for (int y = 0; y < height; y++)
+            for (y = 0; y < height; y++)
             {
-                int x = 0;
+                x = 0;
                 while (x < width)
                 {
-                    Color pixel = bmp.GetPixel(x, y);
-                    Color currentPixel = _currentBitmap.GetPixel(x, y);
+                    pixel = bmp.GetPixel(x, y);
+                    currentPixel = _currentBitmap.GetPixel(x, y);
 
                     if (forceFullFrame || !currentPixel.Equals(pixel))
                     {
-                        int spanStart = x;
-                        int packedRGB = PackXYZ(pixel.R, pixel.G, pixel.B);
+                        spanStart = x;
+                        packedRGB = PackXYZ(pixel.R, pixel.G, pixel.B);
 
                         while (x < width && bmp.GetPixel(x, y).ToArgb() == pixel.ToArgb())
                         {
                             x++;
                         }
-                        int spanLength = x - spanStart;
+                        spanLength = x - spanStart;
 
-                        int packedXYZ = PackXYZ(spanStart, y, spanLength);
+                        packedXYZ = PackXYZ(spanStart, y, spanLength);
 
                         if (!rgbToSpans.ContainsKey(packedRGB))
                         {

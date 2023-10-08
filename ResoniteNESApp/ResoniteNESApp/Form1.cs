@@ -65,7 +65,8 @@ namespace ResoniteNESApp
 
         private void FpsTimer_Tick(object sender, EventArgs e)
         {
-            Console.WriteLine($"Published FPS: {_frameCounter}");
+            //Console.WriteLine($"Published FPS: {_frameCounter}");
+            label11.Text = _frameCounter.ToString();
             _frameCounter = 0;  // Reset the counter
         }
 
