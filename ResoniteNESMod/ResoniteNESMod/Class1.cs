@@ -38,6 +38,10 @@ namespace ResoniteNESMod
         private static int canvasSlotHeightCachedConfigOption;
         private static string canvasSlotNameCachedConfigOption;
 
+        // Fixed size array for all possible RGB values
+        private static colorX[] _allColors;
+        private static bool _allColorsInitialized = false;
+
         public override void OnEngineInit()
         {
             Config = GetConfiguration(); //Get this mods' current ModConfiguration
@@ -50,6 +54,32 @@ namespace ResoniteNESMod
             Msg("a regular log from ResoniteNESMod...");
             Warn("a warn log from ResoniteNESMod...");
             Error("an error log from ResoniteNESMod...");
+
+            if (enabledCachedConfigOption)
+            {
+                initializeAllColors();
+            }
+        }
+
+        private static void initializeAllColors()
+        {
+            Msg("Initializing all colors");
+            _allColors = new colorX[256 * 256 * 256];
+            // Initialize the fixed size array
+            int index = 0;
+            for (int r = 0; r < 256; r++)
+            {
+                for (int g = 0; g < 256; g++)
+                {
+                    for (int b = 0; b < 256; b++)
+                    {
+                        _allColors[index++] = new colorX(r / 1000f, g / 1000f, b / 1000f, 1, ColorProfile.Linear);
+
+                    }
+                }
+            }
+            _allColorsInitialized = true;
+            Msg("Finished initializing all colors");
         }
 
         private static void UpdateCachedConfigOptions()
@@ -75,7 +105,6 @@ namespace ResoniteNESMod
             private static HorizontalLayout[] horizontalLayoutComponentCache;
             private static int[] readPixelData;
             private static int readPixelDataLength = -1;
-            private static Dictionary<int, colorX> colorCache = new Dictionary<int, colorX>();
 
             private const string ClientRenderConfirmationMemoryMappedFileName = "ResoniteClientRenderConfirmation";
             private const int ClientRenderConfirmationMemoryMappedFileSize = sizeof(Int32);
@@ -215,6 +244,17 @@ namespace ResoniteNESMod
                         }
                     }
                     Msg("Created new HorizontalLayouts according to the height constant: " + canvasSlotHeight);
+
+                    if (_allColorsInitialized)
+                    {
+                        Msg("All colors are already initialized");
+                    }
+                    else
+                    {
+                        Msg("All colors have not been initialized yet, so we must do so.");
+                        initializeAllColors();
+                    }
+
                 }
             }
 
@@ -275,7 +315,6 @@ namespace ResoniteNESMod
                         ReadFromMemoryMappedFile();
                         // This can happen if ReadFromMemoryMappedFile() raised an exception
                         if (readPixelDataLength == -1) return;
-                        return;
                     }
                     try
                     {
@@ -288,8 +327,6 @@ namespace ResoniteNESMod
                         Error(e.ToString());
                         initialized = false;
                         Error("Set initialized to false.");
-                        readPixelDataLength = -1;
-                        return;
                     }
                     readPixelDataLength = -1;
                     return;
@@ -306,9 +343,7 @@ namespace ResoniteNESMod
                 static void SetPixelDataToCanvas(Canvas __instance)
                 {
                     int i = 0;
-                    float Rfloat, Gfloat, Bfloat;
-                    int packedRGB;
-                    float R, G, B;
+                    int colorIndex;
                     int packedxStartYSpan, xStart, y, spanLength;
                     int x, xEnd;
                     colorX cachedColor;
@@ -316,19 +351,8 @@ namespace ResoniteNESMod
 
                     while (i < readPixelDataLength)
                     {
-                        packedRGB = readPixelData[i++];
-
-                        // Check if we already have this RGB value cached
-                        if (!colorCache.TryGetValue(packedRGB, out cachedColor))
-                        {
-                            // If not, create and cache it
-                            Rfloat = (float)(((packedRGB / 1000000) % 1000) / 1000f);
-                            Gfloat = (float)(((packedRGB / 1000) % 1000) / 1000f);
-                            Bfloat = (float)((packedRGB % 1000) / 1000f);
-                            cachedColor = new colorX(Rfloat, Gfloat, Bfloat, 1, ColorProfile.Linear);
-                            colorCache[packedRGB] = cachedColor;
-                        }
-
+                        colorIndex = readPixelData[i++];
+                        cachedColor = _allColors[colorIndex];
                         while (i < readPixelDataLength && readPixelData[i] >= 0)
                         {
                             packedxStartYSpan = readPixelData[i++];
@@ -340,10 +364,6 @@ namespace ResoniteNESMod
 
                             for (x = xStart; x < xEnd; x++)
                             {
-                                // For some reason, if I don't do this then I get artifacting.
-                                // And yes, I have to create a new colorX object for each pixel I change.
-                                // I've even tried making a colorX object and using the same one in this function, but it doesn't help much.
-                                //rawGraphicComponentCache[y][x].Color.Value = new colorX(0, 0, 0, 1);
                                 rawGraphicComponentCache[y][x].Color.Value = cachedColor;
                             }
                         }

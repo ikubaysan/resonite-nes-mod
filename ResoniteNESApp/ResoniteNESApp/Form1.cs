@@ -20,7 +20,7 @@ namespace ResoniteNESApp
         private Random _random;
         public const int FRAME_WIDTH = 256;
         public const int FRAME_HEIGHT = 240;
-        private int TargetFramerate = 30;
+        private int TargetFramerate = 36;
 
         private const int PixelDataMemoryMappedFileSize = ((FRAME_WIDTH * FRAME_HEIGHT * 2) + 3) * sizeof(int);
 

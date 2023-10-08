@@ -171,7 +171,7 @@ namespace ResoniteNESApp
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error reading from MemoryMappedFile: " + ex.Message);
+                Console.WriteLine("Error reading from PixelData MemoryMappedFile: " + ex.Message);
                 readPixelDataLength = -1;
             }
         }

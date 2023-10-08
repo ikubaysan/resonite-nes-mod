@@ -17,36 +17,24 @@ namespace ResoniteNESApp
         private static IntPtr cachedWindowHandle = IntPtr.Zero;
         private static string cachedWindowTitle = "";
 
-        // Fixed size array for all possible RGB values
-        // I actually only need to do this in the mod.
-        private static Color[] _allColors;
-
         static FrameData()
         {
             //initializeAllColors();
         }
 
-        private static void initializeAllColors()
+        static Int32 GetIndexFromColor(Color color)
         {
-            _allColors = new Color[256 * 256 * 256];
-            // Initialize the fixed size array
-            int index = 0;
-            for (int r = 0; r < 256; r++)
-            {
-                for (int g = 0; g < 256; g++)
-                {
-                    for (int b = 0; b < 256; b++)
-                    {
-                        _allColors[index++] = Color.FromArgb(r, g, b);
-                    }
-                }
-            }
+            return color.R * 256 * 256 + color.G * 256 + color.B;
         }
 
-        static int GetColorIndex(int r, int g, int b)
+        static Color GetColorFromIndex(int index)
         {
-            return r * 256 * 256 + g * 256 + b;
+            int r = index / (256 * 256);
+            int g = (index / 256) % 256;
+            int b = index % 256;
+            return Color.FromArgb(r, g, b);
         }
+
 
 
         // A helper function to make sure RGB values stay in the 0-255 range
@@ -106,7 +94,6 @@ namespace ResoniteNESApp
                     if (forceFullFrame || currentPixel.R != pixel.R || currentPixel.G != pixel.G || currentPixel.B != pixel.B)
                     {
                         int spanStart = x;
-                        int packedRGB = PackXYZ(pixel.R, pixel.G, pixel.B);
 
                         while (x < width && bmpBytes[offset + 2] == pixel.R && bmpBytes[offset + 1] == pixel.G && bmpBytes[offset] == pixel.B)
                         {
@@ -116,11 +103,12 @@ namespace ResoniteNESApp
 
                         int spanLength = x - spanStart;
                         int packedXYZ = PackXYZ(spanStart, y, spanLength);
+                        int RGBIndex = GetIndexFromColor(pixel);
 
-                        if (!rgbToSpans.TryGetValue(packedRGB, out var spanList))
+                        if (!rgbToSpans.TryGetValue(RGBIndex, out var spanList))
                         {
                             spanList = new List<int>();
-                            rgbToSpans[packedRGB] = spanList;
+                            rgbToSpans[RGBIndex] = spanList;
                         }
                         spanList.Add(packedXYZ);
                     }
@@ -245,8 +233,7 @@ namespace ResoniteNESApp
             int nPixelsChanged = 0;
             while (i < MemoryMappedFileManager.readPixelDataLength)
             {
-                int packedRGB = MemoryMappedFileManager.readPixelData[i++];
-                UnpackXYZ(packedRGB, out int R, out int G, out int B); // Unpack RGB
+                int colorIndex = MemoryMappedFileManager.readPixelData[i++];
 
                 while (i < MemoryMappedFileManager.readPixelDataLength && MemoryMappedFileManager.readPixelData[i] >= 0)
                 {
@@ -254,7 +241,7 @@ namespace ResoniteNESApp
                     UnpackXYZ(packedxStartYSpan, out int xStart, out int y, out int spanLength);
                     for (int x = xStart; x < xStart + spanLength; x++)
                     {
-                        Color newPixelColor = Color.FromArgb(R, G, B);
+                        Color newPixelColor = GetColorFromIndex(colorIndex);
                         //Color newPixelColor = _allColors[GetIndexFromColor(R, G, B)];
                         _currentBitmap.SetPixel(x, y, newPixelColor);
                         nPixelsChanged++;
