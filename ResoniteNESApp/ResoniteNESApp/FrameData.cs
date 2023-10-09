@@ -16,7 +16,7 @@ namespace ResoniteNESApp
         private static Bitmap _currentBitmap = new Bitmap(Form1.FRAME_WIDTH, Form1.FRAME_HEIGHT);
         private static IntPtr cachedWindowHandle = IntPtr.Zero;
         private static string cachedWindowTitle = "";
-        private Dictionary<int, int> rowExpansionAmounts = new Dictionary<int, int>();
+        private static Dictionary<int, int> rowExpansionAmounts = new Dictionary<int, int>();
 
         static FrameData()
         {
@@ -267,7 +267,7 @@ namespace ResoniteNESApp
             return bmp;
         }
 
-        public int GetRowHeight(int rowIndex)
+        public static int GetRowHeight(int rowIndex)
         {
             if (rowIndex < 0 || rowIndex >= Form1.FRAME_HEIGHT)
             {
@@ -286,7 +286,7 @@ namespace ResoniteNESApp
         }
 
 
-        public void SetRowHeight(int rowIndex, int rowHeight)
+        private static void SetRowHeight(int rowIndex, int rowHeight)
         {
             if (rowIndex < 0 || rowHeight < 1)
             {
@@ -298,11 +298,8 @@ namespace ResoniteNESApp
         }
 
 
-        private void ApplyRowHeight(Bitmap bitmap, int rowIndex, int rowHeight)
+        private static void ApplyRowHeight(Bitmap bitmap, int rowIndex, int rowHeight)
         {
-
-
-
             if (rowIndex < 0 || rowIndex >= bitmap.Height)
             {
                 Console.WriteLine("Row index out of bounds.");
@@ -330,6 +327,12 @@ namespace ResoniteNESApp
             return;
         }
 
+        private static void ApplyRowHeights(Bitmap bitmap)
+        {
+            foreach (var row in rowExpansionAmounts)
+                ApplyRowHeight(_currentBitmap, row.Key, row.Value);
+        }
+
         public static Bitmap SetPixelDataToBitmap(int width, int height)
         {
             int i = 0;
@@ -352,6 +355,10 @@ namespace ResoniteNESApp
                 }
                 i++; // Skip the negative delimiter
             }
+
+            //SetRowHeight(239, 50);
+            //ApplyRowHeights(_currentBitmap);
+
             return _currentBitmap;
         }
     }
