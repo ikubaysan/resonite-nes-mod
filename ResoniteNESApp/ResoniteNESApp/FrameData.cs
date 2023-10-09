@@ -110,6 +110,9 @@ namespace ResoniteNESApp
 
             for (int y = 0; y < height; y++)
             {
+
+                if (skippedRows.Contains(y)) continue;
+
                 List<int> currentRowChanges = new List<int>();
 
                 for (int x = 0; x < width;)
@@ -445,14 +448,12 @@ namespace ResoniteNESApp
             }
 
 
-            /*
             for (i = 0; i < MemoryMappedFileManager.readContiguousRangePairsLength; i+= 2)
             {
                 int rowIndex = MemoryMappedFileManager.readContiguousRangePairs[i];
                 int rowHeight = MemoryMappedFileManager.readContiguousRangePairs[i + 1];
                 SetRowHeight(rowIndex, rowHeight);
             }
-            */
 
             //SetRowHeight(239, 50);
             ApplyRowHeights(_simulatedCanvas);
