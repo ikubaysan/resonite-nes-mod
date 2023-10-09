@@ -14,6 +14,7 @@ namespace ResoniteNESApp
 
         private static Dictionary<int, List<int>> rgbToSpans; // Map RGB values to spans
         private static Bitmap _currentBitmap = new Bitmap(Form1.FRAME_WIDTH, Form1.FRAME_HEIGHT);
+        private static Bitmap _simulatedCanvas = new Bitmap(Form1.FRAME_WIDTH, Form1.FRAME_HEIGHT);
         private static IntPtr cachedWindowHandle = IntPtr.Zero;
         private static string cachedWindowTitle = "";
         private static Dictionary<int, int> rowExpansionAmounts = new Dictionary<int, int>();
@@ -164,7 +165,8 @@ namespace ResoniteNESApp
 
             bmp.UnlockBits(bmpData);
             _currentBitmap.UnlockBits(currentBmpData);
-            bmp.Dispose();
+
+            _currentBitmap = bmp;
 
             // Print contiguous identical row indices
             Console.WriteLine("Contiguous identical row indices (" + contiguousIdenticalRows.Count + ")" + ": " + string.Join(", ", contiguousIdenticalRows));
@@ -330,7 +332,7 @@ namespace ResoniteNESApp
         private static void ApplyRowHeights(Bitmap bitmap)
         {
             foreach (var row in rowExpansionAmounts)
-                ApplyRowHeight(_currentBitmap, row.Key, row.Value);
+                ApplyRowHeight(_simulatedCanvas, row.Key, row.Value);
         }
 
         public static Bitmap SetPixelDataToBitmap(int width, int height)
@@ -349,7 +351,7 @@ namespace ResoniteNESApp
                     {
                         Color newPixelColor = GetColorFromIndex(colorIndex);
                         //Color newPixelColor = _allColors[GetIndexFromColor(R, G, B)];
-                        _currentBitmap.SetPixel(x, y, newPixelColor);
+                        _simulatedCanvas.SetPixel(x, y, newPixelColor);
                         nPixelsChanged++;
                     }
                 }
@@ -357,9 +359,9 @@ namespace ResoniteNESApp
             }
 
             //SetRowHeight(239, 50);
-            //ApplyRowHeights(_currentBitmap);
+            //ApplyRowHeights(_simulatedCanvas);
 
-            return _currentBitmap;
+            return _simulatedCanvas;
         }
     }
 }
