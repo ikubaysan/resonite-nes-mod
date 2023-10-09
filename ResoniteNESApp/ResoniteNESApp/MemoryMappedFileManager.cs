@@ -24,6 +24,7 @@ namespace ResoniteNESApp
         public static Int32 latestPublishedFrameMillisecondsOffset;
         public static int readPixelDataLength;
         public static DateTime _lastFrameTime = DateTime.MinValue;
+        public static int[] contiguousRangePairs = new int[Form1.FRAME_WIDTH * Form1.FRAME_HEIGHT];
         public static int[] readPixelData = new int[Form1.FRAME_WIDTH * Form1.FRAME_HEIGHT];
         private static bool forceRefreshedFrameFromMMF;
 
@@ -100,7 +101,18 @@ namespace ResoniteNESApp
                     if (forceRefreshedFrame) latestPublishedFrameMillisecondsOffset = -latestPublishedFrameMillisecondsOffset;
 
                     writer.Write(latestPublishedFrameMillisecondsOffset);
-                    writer.Write((Int32)pixelData.Count); // The amount of integers that are currently relevant
+
+                    // Write the count of contiguousRangePairs
+                    Int32 contiguousRangePairsCount = contiguousRangePairs.Count;
+                    writer.Write(contiguousRangePairsCount);
+
+                    // Iterate over contiguousRangePairs with a for loop
+                    foreach (Int16 value in contiguousRangePairs)
+                    {
+                        writer.Write(value);
+                    }
+
+                    writer.Write((Int32)pixelData.Count); // Write the count of pixelData, which is the amount of integers that are currently relevant
 
                     // Finally, write the pixel data
                     foreach (Int32 value in pixelData)
@@ -108,8 +120,8 @@ namespace ResoniteNESApp
                         writer.Write(value);
                     }
 
-                    stream.Seek(0, SeekOrigin.Begin); // Seek back to the beginning
-                    writer.Write((short)1); // Set status to "ready"
+                    stream.Seek(0, SeekOrigin.Begin); // Seek back to the beginning so we can...
+                    writer.Write((short)1); // set status to "ready"
                 }
             }
             catch (Exception ex)
@@ -160,6 +172,16 @@ namespace ResoniteNESApp
 
                     latestReceivedFrameMillisecondsOffset = millisecondsOffset;
 
+                    // Read the count of contiguousRangePairs
+                    int contiguousRangePairsCount = reader.ReadInt32();
+
+                    // Now read the contiguousRangePairs, based on contiguousRangePairsCount
+                    for (int i = 0; i < contiguousRangePairsCount; i++)
+                    {
+                        contiguousRangePairs[i] = reader.ReadInt16();
+                    }
+
+                    // Read the count of pixelData
                     readPixelDataLength = reader.ReadInt32();
 
                     // Now read the pixel data, based on readPixelDataLength
