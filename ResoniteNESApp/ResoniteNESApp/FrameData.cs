@@ -16,6 +16,7 @@ namespace ResoniteNESApp
         private static Bitmap _currentBitmap = new Bitmap(Form1.FRAME_WIDTH, Form1.FRAME_HEIGHT);
         private static IntPtr cachedWindowHandle = IntPtr.Zero;
         private static string cachedWindowTitle = "";
+        private Dictionary<int, int> rowExpansionAmounts = new Dictionary<int, int>();
 
         static FrameData()
         {
@@ -264,6 +265,69 @@ namespace ResoniteNESApp
                 }
             }
             return bmp;
+        }
+
+        public int GetRowHeight(int rowIndex)
+        {
+            if (rowIndex < 0 || rowIndex >= Form1.FRAME_HEIGHT)
+            {
+                Console.WriteLine("Invalid row index.");
+                return -1;
+            }
+
+            if (rowExpansionAmounts.ContainsKey(rowIndex))
+            {
+                return rowExpansionAmounts[rowIndex];
+            }
+            else
+            {
+                return 1;
+            }
+        }
+
+
+        public void SetRowHeight(int rowIndex, int rowHeight)
+        {
+            if (rowIndex < 0 || rowHeight < 1)
+            {
+                Console.WriteLine("Invalid row index or height.");
+                return;
+            }
+
+            rowExpansionAmounts[rowIndex] = rowHeight;
+        }
+
+
+        private void ApplyRowHeight(Bitmap bitmap, int rowIndex, int rowHeight)
+        {
+
+
+
+            if (rowIndex < 0 || rowIndex >= bitmap.Height)
+            {
+                Console.WriteLine("Row index out of bounds.");
+                return;
+            }
+
+            if (rowHeight < 1 || rowIndex - rowHeight < -1)
+            {
+                Console.WriteLine("Invalid row height or not enough rows below to set.");
+                return;
+            }
+
+            // Expand the row upwards based on its height.
+            // Greater rowIndex means lower on the screen.
+            List<int> updatedRows = new List<int>();
+            for (int y = rowIndex; y > rowIndex - rowHeight; y--)
+            {
+                for (int x = 0; x < bitmap.Width; x++)
+                {
+                    Color pixelColor = bitmap.GetPixel(x, rowIndex);
+                    bitmap.SetPixel(x, y, pixelColor);
+                }
+                updatedRows.Add(y);
+            }
+            return;
         }
 
         public static Bitmap SetPixelDataToBitmap(int width, int height)
