@@ -86,6 +86,7 @@ namespace ResoniteNESApp
 
             int length = bmpBytes.Length;
             int stride = bmpData.Stride;
+            int spanStart;
 
             List<int> previousRowChanges = null;
             List<int> contiguousSegmentStarts = new List<int>();
@@ -103,7 +104,7 @@ namespace ResoniteNESApp
 
                     if (forceFullFrame || currentPixel.R != pixel.R || currentPixel.G != pixel.G || currentPixel.B != pixel.B)
                     {
-                        int spanStart = x;
+                        spanStart = x;
 
                         while (x < width && bmpBytes[offset + 2] == pixel.R && bmpBytes[offset + 1] == pixel.G && bmpBytes[offset] == pixel.B)
                         {
@@ -168,8 +169,36 @@ namespace ResoniteNESApp
 
             _currentBitmap = bmp;
 
+
+            // Post processing the contiguousIdenticalRows list to obtain pairs
+            List<Tuple<int, int>> contiguousRangePairs = new List<Tuple<int, int>>();
+            int? previousValue = null;
+            spanStart = -1;
+            foreach (int currentValue in contiguousIdenticalRows)
+            {
+                if (previousValue == null)
+                {
+                    spanStart = currentValue;
+                }
+                else if (currentValue - previousValue.Value > 1)
+                {
+                    int span = previousValue.Value - spanStart + 1;
+                    contiguousRangePairs.Add(new Tuple<int, int>(previousValue.Value, span));
+                    spanStart = currentValue;
+                }
+                previousValue = currentValue;
+            }
+            if (previousValue != null)
+            {
+                int span = previousValue.Value - spanStart + 1;
+                contiguousRangePairs.Add(new Tuple<int, int>(previousValue.Value, span));
+            }
+
             // Print contiguous identical row indices
             Console.WriteLine("Contiguous identical row indices (" + contiguousIdenticalRows.Count + ")" + ": " + string.Join(", ", contiguousIdenticalRows));
+
+            // Print the range pairs in one line
+            Console.WriteLine("Contiguous row end and spans: (" + contiguousRangePairs.Count + ") " + string.Join(", ", contiguousRangePairs.Select(pair => $"({pair.Item1}, {pair.Item2})")));
 
             return pixelDataList.ToArray();
         }
