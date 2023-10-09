@@ -78,7 +78,7 @@ namespace ResoniteNESApp
             }
         }
 
-        public static void WritePixelDataToMemoryMappedFile(int[] pixelData, int PixelDataMemoryMappedFileSize, bool forceRefreshedFrame)
+        public static void WritePixelDataToMemoryMappedFile(List<int> pixelData, List<int> contiguousRangePairs, int PixelDataMemoryMappedFileSize, bool forceRefreshedFrame)
         {
             try
             {
@@ -100,7 +100,7 @@ namespace ResoniteNESApp
                     if (forceRefreshedFrame) latestPublishedFrameMillisecondsOffset = -latestPublishedFrameMillisecondsOffset;
 
                     writer.Write(latestPublishedFrameMillisecondsOffset);
-                    writer.Write((Int32)pixelData.Length); // The amount of integers that are currently relevant
+                    writer.Write((Int32)pixelData.Count); // The amount of integers that are currently relevant
 
                     // Finally, write the pixel data
                     foreach (Int32 value in pixelData)

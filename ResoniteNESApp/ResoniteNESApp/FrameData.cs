@@ -18,6 +18,8 @@ namespace ResoniteNESApp
         private static IntPtr cachedWindowHandle = IntPtr.Zero;
         private static string cachedWindowTitle = "";
         private static Dictionary<int, int> rowExpansionAmounts = new Dictionary<int, int>();
+        private static List<int> skippedRows = new List<int>();
+
 
         static FrameData()
         {
@@ -58,16 +60,31 @@ namespace ResoniteNESApp
             Y = (packedXYZ / 1000) % 1000;
             Z = packedXYZ % 1000;
         }
+        static int GetXFromPackedXYZ(Int32 packedXYZ)
+        {
+            return (packedXYZ / 1000000) % 1000;
+        }
 
-        static public int[] GeneratePixelDataFromWindow(string targetWindowTitle, int titleBarHeight, int width, int height, bool forceFullFrame, double brightnessFactor, bool scanlinesEnabled, double darkenFactor)
+        static int GetYFromPackedXYZ(Int32 packedXYZ)
+        {
+            return (packedXYZ / 1000) % 1000;
+        }
+
+        static int GetZFromPackedXYZ(Int32 packedXYZ)
+        {
+            return packedXYZ % 1000;
+        }
+
+        static public (List<int>, List<int>) GeneratePixelDataFromWindow(string targetWindowTitle, int titleBarHeight, int width, int height, bool forceFullFrame, double brightnessFactor, bool scanlinesEnabled, double darkenFactor)
         {
             Bitmap bmp = CaptureWindow(targetWindowTitle, titleBarHeight, brightnessFactor, scanlinesEnabled, darkenFactor);
             if (bmp == null)
             {
-                return null;
+                return (null, null);
             }
 
             List<int> pixelDataList = new List<int>();
+
             rgbToSpans = new Dictionary<int, List<int>>();
 
             Dictionary<int, List<int>> rowChanges = new Dictionary<int, List<int>>();
@@ -157,22 +174,13 @@ namespace ResoniteNESApp
                 previousRowChanges = currentRowChanges;
             }
 
-            foreach (var kvp in rgbToSpans)
-            {
-                pixelDataList.Add(kvp.Key);
-                pixelDataList.AddRange(kvp.Value);
-                pixelDataList.Add(-kvp.Value.Last());
-            }
-
-            bmp.UnlockBits(bmpData);
-            _currentBitmap.UnlockBits(currentBmpData);
-
-            _currentBitmap = bmp;
-
-
             // Post processing the contiguousIdenticalRows list to obtain pairs
-            List<Tuple<int, int>> contiguousRangePairs = new List<Tuple<int, int>>();
+            skippedRows.Clear();
+            //List<Tuple<int, int>> contiguousRangePairs = new List<Tuple<int, int>>();
+            List<int> contiguousRangePairs = new List<int>();
+
             int? previousValue = null;
+            int rowRangeEndIndex, span;
             spanStart = -1;
             foreach (int currentValue in contiguousIdenticalRows)
             {
@@ -182,25 +190,73 @@ namespace ResoniteNESApp
                 }
                 else if (currentValue - previousValue.Value > 1)
                 {
-                    int span = previousValue.Value - spanStart + 1;
-                    contiguousRangePairs.Add(new Tuple<int, int>(previousValue.Value, span));
+                    rowRangeEndIndex = previousValue.Value;
+                    span = rowRangeEndIndex - spanStart + 1;
+                    //contiguousRangePairs.Add(new Tuple<int, int>(rowRangeEndIndex, span));
+                    contiguousRangePairs.Add(rowRangeEndIndex);
+                    contiguousRangePairs.Add(span);
                     spanStart = currentValue;
+
+                    // TODO: Take note for accuracy
+                    for (int i = rowRangeEndIndex - 1; i >= rowRangeEndIndex - span; i--)
+                    {
+                        skippedRows.Add(i);
+                    }
+
                 }
                 previousValue = currentValue;
             }
+
             if (previousValue != null)
             {
-                int span = previousValue.Value - spanStart + 1;
-                contiguousRangePairs.Add(new Tuple<int, int>(previousValue.Value, span));
+                rowRangeEndIndex = previousValue.Value;
+                span = previousValue.Value - spanStart + 1;
+                //contiguousRangePairs.Add(new Tuple<int, int>(previousValue.Value, span));
+                contiguousRangePairs.Add(rowRangeEndIndex);
+                contiguousRangePairs.Add(span);
+                
+                // TODO: Take note for accuracy
+                for (int i = rowRangeEndIndex - 1; i >= rowRangeEndIndex - span; i--)
+                {
+                    skippedRows.Add(i);
+                }
+            }
+
+            foreach (var kvp in rgbToSpans)
+            {
+                int RGBIndex = kvp.Key;
+                // Doesn't matter which element we use, choosing index 0
+                // Y of the XYZ-packed integer is the row index
+                int rowIndex = GetYFromPackedXYZ(kvp.Value[0]);
+
+                /*
+                if (skippedRows.Contains(rowIndex))
+                {
+                    continue;
+                }
+                */
+
+                pixelDataList.Add(kvp.Key);
+
+                List<int> spanList = kvp.Value;
+
+                pixelDataList.AddRange(spanList);
+                pixelDataList.Add(-kvp.Value.Last());
             }
 
             // Print contiguous identical row indices
-            Console.WriteLine("Contiguous identical row indices (" + contiguousIdenticalRows.Count + ")" + ": " + string.Join(", ", contiguousIdenticalRows));
+            Console.WriteLine("Contiguous identical row indices (" + contiguousIdenticalRows.Count + "): " + string.Join(", ", contiguousIdenticalRows));
 
             // Print the range pairs in one line
-            Console.WriteLine("Contiguous row end and spans: (" + contiguousRangePairs.Count + ") " + string.Join(", ", contiguousRangePairs.Select(pair => $"({pair.Item1}, {pair.Item2})")));
+            //Console.WriteLine("Contiguous row end and spans: (" + contiguousRangePairs.Count + "): " + string.Join(", ", contiguousRangePairs.Select(pair => $"({pair.Item1}, {pair.Item2})")));
+            Console.WriteLine("Contiguous row end and spans: (" + contiguousRangePairs.Count + "): " + string.Join(", ", contiguousRangePairs));
 
-            return pixelDataList.ToArray();
+            bmp.UnlockBits(bmpData);
+            _currentBitmap.UnlockBits(currentBmpData);
+
+            _currentBitmap = bmp;
+
+            return (pixelDataList, contiguousRangePairs);
         }
 
 

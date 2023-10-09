@@ -27,7 +27,7 @@ namespace ResoniteNESApp
         private int fullFrameInterval = 30 * 1000; // 30 seconds in milliseconds
         private DateTime _lastFullFrameTime = DateTime.MinValue;
         private DateTime programStartTime;
-        private int[] pixelData;
+        private List<int> pixelData;
 
         public static double brightnessFactor = 1.0;
         public double darkenFactor = 0.0;
@@ -89,11 +89,11 @@ namespace ResoniteNESApp
             MemoryMappedFileManager._lastFrameTime = DateTime.Now;
 
             // Generate pixel data (SLOW)
-            pixelData = FrameData.GeneratePixelDataFromWindow(targetWindowTitle, titleBarHeight,  FRAME_WIDTH, FRAME_HEIGHT, forceFullFrame, brightnessFactor, scanlinesEnabled, darkenFactor);
+            var(pixelData, contiguousRangePairs) = FrameData.GeneratePixelDataFromWindow(targetWindowTitle, titleBarHeight,  FRAME_WIDTH, FRAME_HEIGHT, forceFullFrame, brightnessFactor, scanlinesEnabled, darkenFactor);
             if (pixelData == null) return;
 
             // Write to MemoryMappedFile
-            MemoryMappedFileManager.WritePixelDataToMemoryMappedFile(pixelData, PixelDataMemoryMappedFileSize, forceFullFrame);
+            MemoryMappedFileManager.WritePixelDataToMemoryMappedFile(pixelData, contiguousRangePairs, PixelDataMemoryMappedFileSize, forceFullFrame);
 
             // Read from MemoryMappedFile
             if (MemoryMappedFileManager._pixelDataMemoryMappedViewStream == null)
