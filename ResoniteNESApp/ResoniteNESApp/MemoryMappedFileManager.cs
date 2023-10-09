@@ -23,8 +23,9 @@ namespace ResoniteNESApp
         // Add 3 to account for the 3 ints we write before the pixel data
         public static Int32 latestPublishedFrameMillisecondsOffset;
         public static int readPixelDataLength;
+        public static int readContiguousRangePairsLength;
         public static DateTime _lastFrameTime = DateTime.MinValue;
-        public static int[] contiguousRangePairs = new int[Form1.FRAME_WIDTH * Form1.FRAME_HEIGHT];
+        public static int[] readContiguousRangePairs = new int[Form1.FRAME_WIDTH * Form1.FRAME_HEIGHT];
         public static int[] readPixelData = new int[Form1.FRAME_WIDTH * Form1.FRAME_HEIGHT];
         private static bool forceRefreshedFrameFromMMF;
 
@@ -173,12 +174,12 @@ namespace ResoniteNESApp
                     latestReceivedFrameMillisecondsOffset = millisecondsOffset;
 
                     // Read the count of contiguousRangePairs
-                    int contiguousRangePairsCount = reader.ReadInt32();
+                    readContiguousRangePairsLength = reader.ReadInt32();
 
                     // Now read the contiguousRangePairs, based on contiguousRangePairsCount
-                    for (int i = 0; i < contiguousRangePairsCount; i++)
+                    for (int i = 0; i < readContiguousRangePairsLength; i++)
                     {
-                        contiguousRangePairs[i] = reader.ReadInt16();
+                        readContiguousRangePairs[i] = reader.ReadInt16();
                     }
 
                     // Read the count of pixelData

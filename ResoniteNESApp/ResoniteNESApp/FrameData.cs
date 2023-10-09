@@ -229,12 +229,7 @@ namespace ResoniteNESApp
                 // Y of the XYZ-packed integer is the row index
                 int rowIndex = GetYFromPackedXYZ(kvp.Value[0]);
 
-                /*
-                if (skippedRows.Contains(rowIndex))
-                {
-                    continue;
-                }
-                */
+                //if (skippedRows.Contains(rowIndex)) continue;
 
                 pixelDataList.Add(kvp.Key);
 
@@ -443,8 +438,20 @@ namespace ResoniteNESApp
                 i++; // Skip the negative delimiter
             }
 
+            for (int j = 0; j < Form1.FRAME_HEIGHT; j++)
+            { 
+                SetRowHeight(j, 1);
+            }
+
+            for (i = 0; i < MemoryMappedFileManager.readContiguousRangePairsLength; i+= 2)
+            {
+                int rowIndex = MemoryMappedFileManager.readContiguousRangePairs[i];
+                int rowHeight = MemoryMappedFileManager.readContiguousRangePairs[i + 1];
+                SetRowHeight(rowIndex, rowHeight);
+            }
+
             //SetRowHeight(239, 50);
-            //ApplyRowHeights(_simulatedCanvas);
+            ApplyRowHeights(_simulatedCanvas);
 
             return _simulatedCanvas;
         }
