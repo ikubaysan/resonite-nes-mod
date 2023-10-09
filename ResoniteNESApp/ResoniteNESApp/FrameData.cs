@@ -68,6 +68,9 @@ namespace ResoniteNESApp
             List<int> pixelDataList = new List<int>();
             rgbToSpans = new Dictionary<int, List<int>>();
 
+            Dictionary<int, List<int>> rowChanges = new Dictionary<int, List<int>>();
+            List<int> contiguousIdenticalRows = new List<int>();
+
             // Use BitmapData for faster pixel access
             BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.ReadOnly, bmp.PixelFormat);
             BitmapData currentBmpData = _currentBitmap.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.ReadOnly, _currentBitmap.PixelFormat);
@@ -82,8 +85,13 @@ namespace ResoniteNESApp
             int length = bmpBytes.Length;
             int stride = bmpData.Stride;
 
+            List<int> previousRowChanges = null;
+            List<int> contiguousSegmentStarts = new List<int>();
+
             for (int y = 0; y < height; y++)
             {
+                List<int> currentRowChanges = new List<int>();
+
                 for (int x = 0; x < width;)
                 {
                     int offset = y * stride + x * bytesPerPixel;
@@ -111,12 +119,39 @@ namespace ResoniteNESApp
                             rgbToSpans[RGBIndex] = spanList;
                         }
                         spanList.Add(packedXYZ);
+                        currentRowChanges.Add(packedXYZ);
                     }
                     else
                     {
                         x++;
                     }
                 }
+
+                rowChanges[y] = currentRowChanges;
+
+                if (currentRowChanges.Count == 0)
+                {
+                    if (contiguousSegmentStarts.Count > 0)
+                    {
+                        contiguousIdenticalRows.AddRange(contiguousSegmentStarts);
+                        contiguousSegmentStarts.Clear();
+                    }
+                }
+                else if (previousRowChanges == null || !currentRowChanges.SequenceEqual(previousRowChanges))
+                {
+                    if (contiguousSegmentStarts.Count > 0)
+                    {
+                        contiguousIdenticalRows.AddRange(contiguousSegmentStarts);
+                    }
+                    contiguousSegmentStarts.Clear();
+                    contiguousSegmentStarts.Add(y);
+                }
+                else
+                {
+                    contiguousSegmentStarts.Add(y);
+                }
+
+                previousRowChanges = currentRowChanges;
             }
 
             foreach (var kvp in rgbToSpans)
@@ -130,8 +165,12 @@ namespace ResoniteNESApp
             _currentBitmap.UnlockBits(currentBmpData);
             bmp.Dispose();
 
+            // Print contiguous identical row indices
+            Console.WriteLine("Contiguous identical row indices (" + contiguousIdenticalRows.Count + ")" + ": " + string.Join(", ", contiguousIdenticalRows));
+
             return pixelDataList.ToArray();
         }
+
 
         private static Bitmap CaptureWindow(string targetWindowTitle, int titleBarHeight, double brightnessFactor, bool scanlinesEnabled, double darkenFactor)
         {
