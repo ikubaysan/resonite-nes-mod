@@ -88,7 +88,7 @@ namespace ResoniteNESApp
             }
             MemoryMappedFileManager._lastFrameTime = DateTime.Now;
 
-            // Generate pixel data
+            // Generate pixel data (SLOW)
             pixelData = FrameData.GeneratePixelDataFromWindow(targetWindowTitle, titleBarHeight,  FRAME_WIDTH, FRAME_HEIGHT, forceFullFrame, brightnessFactor, scanlinesEnabled, darkenFactor);
             if (pixelData == null) return;
 
@@ -107,7 +107,7 @@ namespace ResoniteNESApp
 
             if (previewCheckBox.Checked)
             {
-                // Preview is enabled, so convert pixel data to Bitmap and set to PictureBox
+                // Preview is enabled, so convert pixel data to Bitmap and set to PictureBox (SLOW)
                 pictureBox1.Image = FrameData.SetPixelDataToBitmap(FRAME_WIDTH, FRAME_HEIGHT);
             }
 
