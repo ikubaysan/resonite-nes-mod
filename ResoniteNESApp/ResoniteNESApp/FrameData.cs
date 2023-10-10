@@ -394,6 +394,7 @@ namespace ResoniteNESApp
             _cachedBitmap = bmp;
 
             contiguousRangePairs = currentContiguousRangePairs;
+            skippedRows = currentSkippedRows;
             return (pixelDataList, contiguousRangePairs);
         }
 
