@@ -378,8 +378,8 @@ namespace ResoniteNESApp
             {
                 if (y < 0 || y >= height) continue;
 
-                //List<Color> previousPixels = cachedRowPixels.ContainsKey(y) ? cachedRowPixels[y] : null;
-                List<Color> previousPixels = null;
+                List<Color> previousPixels = cachedRowPixels.ContainsKey(y) && rowsWithChangedContiguousSpanEndIndex.Contains(y) ? cachedRowPixels[y] : null;
+                //List<Color> previousPixels = null;
 
                 // Reset the row's spans/heights to 1
                 currentContiguousRangePairs.Add(y);
