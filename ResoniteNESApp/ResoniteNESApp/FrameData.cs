@@ -249,6 +249,7 @@ namespace ResoniteNESApp
                 }
                 i++; // Skip the negative delimiter
             }
+            Console.WriteLine("Pixels changed: " + nPixelsChanged);
             return _currentBitmap;
         }
     }
