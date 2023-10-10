@@ -178,8 +178,7 @@ namespace ResoniteNESApp
             }
 
             // Post processing the contiguousIdenticalRows list to obtain pairs
-            skippedRows.Clear();
-            //List<Tuple<int, int>> contiguousRangePairs = new List<Tuple<int, int>>();
+            List<int> skippedRowsCurrent = new List<int>();
             List<int> contiguousRangePairs = new List<int>();
 
             int? previousValue = null;
@@ -195,15 +194,14 @@ namespace ResoniteNESApp
                 {
                     rowRangeEndIndex = previousValue.Value;
                     span = rowRangeEndIndex - spanStart + 1;
-                    //contiguousRangePairs.Add(new Tuple<int, int>(rowRangeEndIndex, span));
                     contiguousRangePairs.Add(rowRangeEndIndex);
                     contiguousRangePairs.Add(span);
                     spanStart = currentValue;
 
                     // TODO: Take note for accuracy
-                    for (int i = rowRangeEndIndex - 1; i >= rowRangeEndIndex - span; i--)
+                    for (int i = rowRangeEndIndex; i > rowRangeEndIndex - span; i--)
                     {
-                        skippedRows.Add(i);
+                        skippedRowsCurrent.Add(i);
                     }
 
                 }
@@ -214,27 +212,82 @@ namespace ResoniteNESApp
             {
                 rowRangeEndIndex = previousValue.Value;
                 span = previousValue.Value - spanStart + 1;
-                //contiguousRangePairs.Add(new Tuple<int, int>(previousValue.Value, span));
                 contiguousRangePairs.Add(rowRangeEndIndex);
                 contiguousRangePairs.Add(span);
-                
+
                 // TODO: Take note for accuracy
-                for (int i = rowRangeEndIndex - 1; i >= rowRangeEndIndex - span; i--)
+                for (int i = rowRangeEndIndex; i > rowRangeEndIndex - span; i--)
                 {
-                    skippedRows.Add(i);
+                    skippedRowsCurrent.Add(i);
                 }
             }
 
+            // For the rows that are in skippedRows but not in skippedRowsCurrent, we need to "force refresh" them.
+            // For those rows, we need to get the pixel values from _currentBitmap and compare them to bmp, get that pixel change data,
+            // and add it to pixelDataList. There won't be any existing pixel change data for those rows because they were skipped.
+            var rowsToForceRefresh = skippedRows.Except(skippedRowsCurrent).ToList();
+
+
+            foreach (int y in rowsToForceRefresh)
+            {
+                List<int> forceRefreshRowChanges = new List<int>();
+
+                for (int x = 0; x < width;)
+                {
+                    int offset = y * stride + x * bytesPerPixel;
+
+                    Color pixel = Color.FromArgb(bmpBytes[offset + 2], bmpBytes[offset + 1], bmpBytes[offset]);
+                    Color currentPixel = Color.FromArgb(currentBmpBytes[offset + 2], currentBmpBytes[offset + 1], currentBmpBytes[offset]);
+
+                    if (currentPixel.R != pixel.R || currentPixel.G != pixel.G || currentPixel.B != pixel.B)
+                    {
+                        spanStart = x;
+
+                        while (x < width && bmpBytes[offset + 2] == pixel.R && bmpBytes[offset + 1] == pixel.G && bmpBytes[offset] == pixel.B)
+                        {
+                            x++;
+                            offset = y * stride + x * bytesPerPixel;
+                        }
+
+                        int spanLength = x - spanStart;
+                        int packedXYZ = PackXYZ(spanStart, y, spanLength);
+                        int RGBIndex = GetIndexFromColor(pixel);
+
+                        if (!rgbToSpans.TryGetValue(RGBIndex, out var spanList))
+                        {
+                            spanList = new List<int>();
+                            rgbToSpans[RGBIndex] = spanList;
+                        }
+                        spanList.Add(packedXYZ);
+                        forceRefreshRowChanges.Add(packedXYZ);
+                    }
+                    else
+                    {
+                        x++;
+                    }
+                }
+
+                /*
+                if (forceRefreshRowChanges.Any())
+                {
+                    foreach (var change in forceRefreshRowChanges)
+                    {
+                        int RGBIndex = GetIndexFromColor(Color.FromArgb(change & 0xFF, (change >> 8) & 0xFF, (change >> 16) & 0xFF));
+                        pixelDataList.Add(RGBIndex);
+                        pixelDataList.Add(change);
+                    }
+                    pixelDataList.Add(-forceRefreshRowChanges.Last());
+                }
+                */
+            }
+
+
+
+            // Now write the pixel data to pixelDataList
             foreach (var kvp in rgbToSpans)
             {
                 int RGBIndex = kvp.Key;
-                // Doesn't matter which element we use, choosing index 0
-                // Y of the XYZ-packed integer is the row index
-                int rowIndex = GetYFromPackedXYZ(kvp.Value[0]);
-
-                //if (skippedRows.Contains(rowIndex)) continue;
-
-                pixelDataList.Add(kvp.Key);
+                pixelDataList.Add(RGBIndex);
 
                 List<int> spanList = kvp.Value;
 
@@ -253,6 +306,8 @@ namespace ResoniteNESApp
             _currentBitmap.UnlockBits(currentBmpData);
 
             _currentBitmap = bmp;
+
+            skippedRows = skippedRowsCurrent;
 
             return (pixelDataList, contiguousRangePairs);
         }
@@ -441,19 +496,20 @@ namespace ResoniteNESApp
                 i++; // Skip the negative delimiter
             }
 
-            
+
             for (int j = 0; j < Form1.FRAME_HEIGHT; j++)
-            { 
+            {
                 SetRowHeight(j, 1);
             }
 
-
-            for (i = 0; i < MemoryMappedFileManager.readContiguousRangePairsLength; i+= 2)
+            
+            for (i = 0; i < MemoryMappedFileManager.readContiguousRangePairsLength; i += 2)
             {
                 int rowIndex = MemoryMappedFileManager.readContiguousRangePairs[i];
                 int rowHeight = MemoryMappedFileManager.readContiguousRangePairs[i + 1];
                 SetRowHeight(rowIndex, rowHeight);
             }
+            
 
             //SetRowHeight(239, 50);
             ApplyRowHeights(_simulatedCanvas);
