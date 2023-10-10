@@ -222,8 +222,6 @@ namespace ResoniteNESApp
 
                 if (skippedRows.Contains(y)) continue;
 
-                List<int> currentRowChanges = new List<int>();
-
                 for (int x = 0; x < width;)
                 {
                     offset = y * stride + x * bytesPerPixel;
@@ -238,7 +236,6 @@ namespace ResoniteNESApp
                         int spanLength = x - spanStart;
                         int packedXYZ = PackXYZ(spanStart, y, spanLength);
                         StoreSpan(rgbToSpans, currentPixel, packedXYZ);
-                        currentRowChanges.Add(packedXYZ);
                     }
                     else
                     {
@@ -262,7 +259,7 @@ namespace ResoniteNESApp
                     int offsetPrevious = (y - 1) * stride + x * bytesPerPixel;
 
                     Color pixelCurrent = GetColorFromOffset(currentBmpBytes, offsetCurrent);
-                    Color pixelPrevious = GetColorFromOffset(currentBmpBytes, offsetPrevious);
+                    Color pixelPrevious = GetColorFromOffset(cachedBmpBytes, offsetPrevious);
 
                     if (pixelCurrent.R != pixelPrevious.R ||
                         pixelCurrent.G != pixelPrevious.G ||
@@ -381,7 +378,8 @@ namespace ResoniteNESApp
             {
                 if (y < 0 || y >= height) continue;
 
-                List<Color> previousPixels = cachedRowPixels.ContainsKey(y) ? cachedRowPixels[y] : null;
+                //List<Color> previousPixels = cachedRowPixels.ContainsKey(y) ? cachedRowPixels[y] : null;
+                List<Color> previousPixels = null;
 
                 // Reset the row's spans/heights to 1
                 currentContiguousRangePairs.Add(y);
