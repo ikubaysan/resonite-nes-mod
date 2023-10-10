@@ -191,6 +191,9 @@ namespace ResoniteNESApp
                 previousRowChanges = currentRowChanges;
             }
 
+
+            contiguousIdenticalRows.Clear();
+
             // Post processing the contiguousIdenticalRows list to obtain pairs
             List<int> skippedRowsCurrent = new List<int>();
             List<int> contiguousRangePairs = new List<int>();
