@@ -192,6 +192,12 @@ namespace ResoniteNESApp
                 previousRowChanges = currentRowChanges;
             }
 
+            // I think this is right...
+            if (contiguousSegmentStarts.Count > 0)
+            {
+                contiguousIdenticalRows.AddRange(contiguousSegmentStarts);
+            }
+
             //contiguousIdenticalRows.Clear();
 
             // Post processing the contiguousIdenticalRows list to obtain pairs
@@ -213,8 +219,10 @@ namespace ResoniteNESApp
                     rowRangeEndIndex = previousValue.Value;
                     rowRangeEndIndicesCurrent.Add(rowRangeEndIndex);
                     span = rowRangeEndIndex - spanStart + 1;
-                    contiguousRangePairs.Add(rowRangeEndIndex + 1);
-                    contiguousRangePairs.Add(span + 1);
+
+                    contiguousRangePairs.Add(rowRangeEndIndex);
+                    contiguousRangePairs.Add(span);
+
                     spanStart = currentValue;
 
                     // TODO: Take note for accuracy
@@ -232,8 +240,9 @@ namespace ResoniteNESApp
                 rowRangeEndIndex = previousValue.Value;
                 rowRangeEndIndicesCurrent.Add(rowRangeEndIndex);
                 span = previousValue.Value - spanStart + 1;
-                contiguousRangePairs.Add(rowRangeEndIndex + 1);
-                contiguousRangePairs.Add(span + 1);
+
+                contiguousRangePairs.Add(rowRangeEndIndex);
+                contiguousRangePairs.Add(span);
 
                 // TODO: Take note for accuracy
                 for (int i = rowRangeEndIndex; i > rowRangeEndIndex - span; i--)
