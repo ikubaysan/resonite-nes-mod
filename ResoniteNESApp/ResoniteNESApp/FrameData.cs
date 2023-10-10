@@ -202,17 +202,17 @@ namespace ResoniteNESApp
 
 
             // Use BitmapData for faster pixel access
-            BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.ReadOnly, bmp.PixelFormat);
+            BitmapData currentBmpData = bmp.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.ReadOnly, bmp.PixelFormat);
             BitmapData cachedBmpData = _cachedBitmap.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.ReadOnly, _cachedBitmap.PixelFormat);
 
             int bytesPerPixel = Image.GetPixelFormatSize(bmp.PixelFormat) / 8;
-            byte[] bmpBytes = new byte[width * height * bytesPerPixel];
             byte[] currentBmpBytes = new byte[width * height * bytesPerPixel];
+            byte[] cachedBmpBytes = new byte[width * height * bytesPerPixel];
 
-            Marshal.Copy(bmpData.Scan0, bmpBytes, 0, bmpBytes.Length);
-            Marshal.Copy(cachedBmpData.Scan0, currentBmpBytes, 0, currentBmpBytes.Length);
+            Marshal.Copy(currentBmpData.Scan0, currentBmpBytes, 0, currentBmpBytes.Length);
+            Marshal.Copy(cachedBmpData.Scan0, cachedBmpBytes, 0, cachedBmpBytes.Length);
 
-            int stride = bmpData.Stride;
+            int stride = currentBmpData.Stride;
             int spanStart;
 
             for (int y = 0; y < height; y++)
@@ -222,14 +222,14 @@ namespace ResoniteNESApp
                 for (int x = 0; x < width;)
                 {
                     int offset = y * stride + x * bytesPerPixel;
-                    Color pixel = GetColorFromOffset(bmpBytes, offset);
-                    Color currentPixel = Color.FromArgb(currentBmpBytes[offset + 2], currentBmpBytes[offset + 1], currentBmpBytes[offset]);
+                    Color pixel = GetColorFromOffset(currentBmpBytes, offset);
+                    Color currentPixel = Color.FromArgb(cachedBmpBytes[offset + 2], cachedBmpBytes[offset + 1], cachedBmpBytes[offset]);
 
                     if (forceFullFrame || currentPixel.R != pixel.R || currentPixel.G != pixel.G || currentPixel.B != pixel.B)
                     {
                         spanStart = x;
 
-                        x = IdentifySpan(bmpBytes, x, y, stride, width, bytesPerPixel, pixel);
+                        x = IdentifySpan(currentBmpBytes, x, y, stride, width, bytesPerPixel, pixel);
                         int spanLength = x - spanStart;
                         int packedXYZ = PackXYZ(spanStart, y, spanLength);
                         StoreSpan(rgbToSpans, pixel, packedXYZ);
@@ -256,8 +256,8 @@ namespace ResoniteNESApp
                     int offsetCurrent = y * stride + x * bytesPerPixel;
                     int offsetPrevious = (y - 1) * stride + x * bytesPerPixel;
 
-                    Color pixelCurrent = GetColorFromOffset(bmpBytes, offsetCurrent);
-                    Color pixelPrevious = GetColorFromOffset(bmpBytes, offsetPrevious);
+                    Color pixelCurrent = GetColorFromOffset(currentBmpBytes, offsetCurrent);
+                    Color pixelPrevious = GetColorFromOffset(currentBmpBytes, offsetPrevious);
 
                     if (pixelCurrent.R != pixelPrevious.R ||
                         pixelCurrent.G != pixelPrevious.G ||
@@ -346,10 +346,6 @@ namespace ResoniteNESApp
                 }
             }
 
-            // For the rows that are in skippedRows but not in currentSkippedRows (meaning these rows are no longer skipped), we need to "force refresh" them.
-            // For those rows, we need to get the pixel values from _cachedBitmap and compare them to bmp, get that pixel change data,
-            // and add it to pixelDataList. There won't be any existing pixel change data for those rows because they were skipped.
-
             List<int> newlyNotSkippedRows = skippedRows.Except(currentSkippedRows).ToList();
             Console.WriteLine("Newly not skipped rows: (" + newlyNotSkippedRows.Count + ") " + string.Join(", ", newlyNotSkippedRows));
             
@@ -379,10 +375,10 @@ namespace ResoniteNESApp
                 {
                     int offset = y * stride + x * bytesPerPixel;
 
-                    Color pixel = GetColorFromOffset(bmpBytes, offset);
+                    Color pixel = GetColorFromOffset(currentBmpBytes, offset);
 
                     spanStart = x;
-                    x = IdentifySpan(bmpBytes, x, y, stride, width, bytesPerPixel, pixel);
+                    x = IdentifySpan(currentBmpBytes, x, y, stride, width, bytesPerPixel, pixel);
 
                     int spanLength = x - spanStart;
                     int packedXYZ = PackXYZ(spanStart, y, spanLength);
@@ -405,7 +401,7 @@ namespace ResoniteNESApp
             // Print the range pairs in one line
             Console.WriteLine("Contiguous row end and spans: (" + currentContiguousRangePairs.Count + "): " + string.Join(", ", currentContiguousRangePairs));
 
-            bmp.UnlockBits(bmpData);
+            bmp.UnlockBits(currentBmpData);
             _cachedBitmap.UnlockBits(cachedBmpData);
             _cachedBitmap = bmp;
 
