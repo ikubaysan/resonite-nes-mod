@@ -212,11 +212,8 @@ namespace ResoniteNESApp
             Marshal.Copy(bmpData.Scan0, bmpBytes, 0, bmpBytes.Length);
             Marshal.Copy(cachedBmpData.Scan0, currentBmpBytes, 0, currentBmpBytes.Length);
 
-            int length = bmpBytes.Length;
             int stride = bmpData.Stride;
             int spanStart;
-
-            List<int> contiguousSegmentStarts = new List<int>();
 
             for (int y = 0; y < height; y++)
             {
@@ -329,7 +326,7 @@ namespace ResoniteNESApp
 
 
             List<int> currentContiguousRangePairs = new List<int>();
-            bool[] rowNeedsUpdate = new bool[Form1.FRAME_HEIGHT];
+            List<int> rowsWithChangedContiguousSpanEndIndex = new List<int>();
 
             for (int i = 0; i < contiguousEndIndices.Count; i++)
             {
@@ -342,7 +339,9 @@ namespace ResoniteNESApp
                     if (rowContiguousSpanEndIndices[rowIndex] != contiguousEndIndices[i])
                     { 
                         rowContiguousSpanEndIndices[rowIndex] = contiguousEndIndices[i];
-                        rowNeedsUpdate[rowIndex] = true;
+                        rowsWithChangedContiguousSpanEndIndex.Add(rowIndex);
+                        // At this point I should also cache the pixels of this row, so when this hits again for this row,
+                        // I can compare the current pixels with the cached pixels instead of needing to update the entire row.
                     }
                 }
             }
@@ -352,22 +351,20 @@ namespace ResoniteNESApp
             // and add it to pixelDataList. There won't be any existing pixel change data for those rows because they were skipped.
 
             List<int> newlyNotSkippedRows = skippedRows.Except(currentSkippedRows).ToList();
-
             Console.WriteLine("Newly not skipped rows: (" + newlyNotSkippedRows.Count + ") " + string.Join(", ", newlyNotSkippedRows));
             
-            //List<int> rowsToForceRefresh = Enumerable.Range(0, 240).ToList();
             List<int> rowsToForceRefresh = newlyNotSkippedRows;
 
-            // Add indices from rowNeedsUpdate that are true to rowsToForceRefresh
-            for (int i = 0; i < rowNeedsUpdate.Length; i++)
+            // Add indices from rowsWithChangedContiguousSpanEndIndex to rowsToForceRefresh
+            foreach (var rowIndex in rowsWithChangedContiguousSpanEndIndex)
             {
-                if (rowNeedsUpdate[i])
+                if (!rowsToForceRefresh.Contains(rowIndex))
                 {
-                    rowsToForceRefresh.Add(i);
+                    rowsToForceRefresh.Add(rowIndex);
                 }
             }
 
-            //currentContiguousRangePairs.Clear();
+            Console.WriteLine("Rows to force refresh: (" + rowsToForceRefresh.Count + ") " + string.Join(", ", rowsToForceRefresh));
 
             foreach (int y in rowsToForceRefresh)
             {
@@ -404,9 +401,6 @@ namespace ResoniteNESApp
                 pixelDataList.AddRange(spanList);
                 pixelDataList.Add(-kvp.Value.Last());
             }
-
-            // Print contiguous identical row indices
-            //Console.WriteLine("Contiguous identical row indices (" + contiguousIdenticalRows.Count + "): " + string.Join(", ", contiguousIdenticalRows));
 
             // Print the range pairs in one line
             Console.WriteLine("Contiguous row end and spans: (" + currentContiguousRangePairs.Count + "): " + string.Join(", ", currentContiguousRangePairs));
@@ -510,35 +504,7 @@ namespace ResoniteNESApp
                 SetRowHeight(rowIndex, rowHeight);
             }
 
-
-            //SetRowHeight(239, 50);
             ApplyRowHeights(_simulatedCanvas);
-
-            /*
-            i = 0;
-            nPixelsChanged = 0;
-            while (i < MemoryMappedFileManager.readPixelDataLength)
-            {
-                int colorIndex = MemoryMappedFileManager.readPixelData[i++];
-
-                while (i < MemoryMappedFileManager.readPixelDataLength && MemoryMappedFileManager.readPixelData[i] >= 0)
-                {
-                    int packedxStartYSpan = MemoryMappedFileManager.readPixelData[i++];
-                    UnpackXYZ(packedxStartYSpan, out int xStart, out int y, out int spanLength);
-                    for (int x = xStart; x < xStart + spanLength; x++)
-                    {
-                        Color newPixelColor = GetColorFromIndex(colorIndex);
-                        _simulatedCanvas.SetPixel(x, y, newPixelColor);
-                        nPixelsChanged++;
-                    }
-                }
-                i++; // Skip the negative delimiter
-            }
-            */
-
-
-
-
             return _simulatedCanvas;
         }
     }
