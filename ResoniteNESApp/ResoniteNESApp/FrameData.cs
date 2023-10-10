@@ -21,6 +21,7 @@ namespace ResoniteNESApp
         private static List<int> rowRangeEndIndices = new List<int>();
         private static List<int> contiguousRangePairs = new List<int>();
         private static List<int> skippedRows = new List<int>();
+        private static int[] rowContiguousSpanEndIndices = new int[Form1.FRAME_HEIGHT];
 
 
         static FrameData()
@@ -328,10 +329,22 @@ namespace ResoniteNESApp
 
 
             List<int> currentContiguousRangePairs = new List<int>();
+            bool[] rowNeedsUpdate = new bool[Form1.FRAME_HEIGHT];
+
             for (int i = 0; i < contiguousEndIndices.Count; i++)
             {
+                int spanLength = contiguousSpanLengths[i];
                 currentContiguousRangePairs.Add(contiguousEndIndices[i]);
-                currentContiguousRangePairs.Add(contiguousSpanLengths[i]);
+                currentContiguousRangePairs.Add(spanLength);
+                for (int s = 0; s < spanLength; s++)
+                {
+                    int rowIndex = contiguousEndIndices[i] - s;
+                    if (rowContiguousSpanEndIndices[rowIndex] != contiguousEndIndices[i])
+                    { 
+                        rowContiguousSpanEndIndices[rowIndex] = contiguousEndIndices[i];
+                        rowNeedsUpdate[rowIndex] = true;
+                    }
+                }
             }
 
             // For the rows that are in skippedRows but not in currentSkippedRows (meaning these rows are no longer skipped), we need to "force refresh" them.
@@ -345,34 +358,39 @@ namespace ResoniteNESApp
             //List<int> rowsToForceRefresh = Enumerable.Range(0, 240).ToList();
             List<int> rowsToForceRefresh = newlyNotSkippedRows;
 
+            // Add indices from rowNeedsUpdate that are true to rowsToForceRefresh
+            for (int i = 0; i < rowNeedsUpdate.Length; i++)
+            {
+                if (rowNeedsUpdate[i])
+                {
+                    rowsToForceRefresh.Add(i);
+                }
+            }
+
             //currentContiguousRangePairs.Clear();
 
-            foreach (int tempy in rowsToForceRefresh)
+            foreach (int y in rowsToForceRefresh)
             {
-                for (int y = tempy - 2; y < tempy + 2; y++)
+                if (y < 0 || y >= height) continue;
+
+                // Reset the row's spans/heights to 1
+                currentContiguousRangePairs.Add(y);
+                currentContiguousRangePairs.Add(1);
+
+                // Force refresh the entire row
+                for (int x = 0; x < width;)
                 {
-                    if (y < 0 || y >= height) continue;
+                    int offset = y * stride + x * bytesPerPixel;
 
-                    // Reset the row's spans/heights to 1
-                    currentContiguousRangePairs.Add(y);
-                    currentContiguousRangePairs.Add(1);
+                    Color pixel = GetColorFromOffset(bmpBytes, offset);
 
-                    // Force refresh the entire row
-                    for (int x = 0; x < width;)
-                    {
-                        int offset = y * stride + x * bytesPerPixel;
+                    spanStart = x;
+                    x = IdentifySpan(bmpBytes, x, y, stride, width, bytesPerPixel, pixel);
 
-                        Color pixel = GetColorFromOffset(bmpBytes, offset);
-
-                        spanStart = x;
-                        x = IdentifySpan(bmpBytes, x, y, stride, width, bytesPerPixel, pixel);
-
-                        int spanLength = x - spanStart;
-                        int packedXYZ = PackXYZ(spanStart, y, spanLength);
-                        StoreSpan(rgbToSpans, pixel, packedXYZ);
-                    }
+                    int spanLength = x - spanStart;
+                    int packedXYZ = PackXYZ(spanStart, y, spanLength);
+                    StoreSpan(rgbToSpans, pixel, packedXYZ);
                 }
-
             }
 
             // Now write the pixel data to pixelDataList
