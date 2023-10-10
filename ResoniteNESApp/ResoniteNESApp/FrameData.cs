@@ -222,17 +222,17 @@ namespace ResoniteNESApp
                 for (int x = 0; x < width;)
                 {
                     int offset = y * stride + x * bytesPerPixel;
-                    Color pixel = GetColorFromOffset(currentBmpBytes, offset);
-                    Color currentPixel = Color.FromArgb(cachedBmpBytes[offset + 2], cachedBmpBytes[offset + 1], cachedBmpBytes[offset]);
+                    Color currentPixel = GetColorFromOffset(currentBmpBytes, offset);
+                    Color cachedPixel = Color.FromArgb(cachedBmpBytes[offset + 2], cachedBmpBytes[offset + 1], cachedBmpBytes[offset]);
 
-                    if (forceFullFrame || currentPixel.R != pixel.R || currentPixel.G != pixel.G || currentPixel.B != pixel.B)
+                    if (forceFullFrame || currentPixel.R != cachedPixel.R || currentPixel.G != cachedPixel.G || currentPixel.B != cachedPixel.B)
                     {
                         spanStart = x;
 
-                        x = IdentifySpan(currentBmpBytes, x, y, stride, width, bytesPerPixel, pixel);
+                        x = IdentifySpan(currentBmpBytes, x, y, stride, width, bytesPerPixel, currentPixel);
                         int spanLength = x - spanStart;
                         int packedXYZ = PackXYZ(spanStart, y, spanLength);
-                        StoreSpan(rgbToSpans, pixel, packedXYZ);
+                        StoreSpan(rgbToSpans, currentPixel, packedXYZ);
                         currentRowChanges.Add(packedXYZ);
                     }
                     else
