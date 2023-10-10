@@ -94,6 +94,8 @@ namespace ResoniteNESApp
 
         private static void StoreSpan(Dictionary<int, List<int>> rgbToSpans, Color pixel, int packedXYZ)
         {
+            // Checks if a span list for this RGB value already exists. If not, create a new one.
+            // Finally, adds the span to the list.
             int RGBIndex = GetIndexFromColor(pixel);
             if (!rgbToSpans.TryGetValue(RGBIndex, out var spanList))
             {
@@ -267,28 +269,39 @@ namespace ResoniteNESApp
             // and add it to pixelDataList. There won't be any existing pixel change data for those rows because they were skipped.
 
             //var rowsToForceRefresh = skippedRows.Except(skippedRowsCurrent).ToList();
-            var rowsToForceRefresh = Enumerable.Range(0, height).ToList();
+            //var rowsToForceRefresh = skippedRowsCurrent.Except(skippedRows).ToList();
+            
+            
+            var newlyNotSkippedRows = skippedRows.Except(skippedRowsCurrent).ToList();
+            var rowsToForceRefresh = newlyNotSkippedRows;
 
-            foreach (int y in rowsToForceRefresh)
+            //var rowsToForceRefresh = Enumerable.Range(0, height).ToList();
+
+            foreach (int tempy in rowsToForceRefresh)
             {
-                
-                // Reset the row's spans/heights to 1
-                contiguousRangePairs.Add(y);
-                contiguousRangePairs.Add(1);
 
-                // Force refresh the entire row
-                for (int x = 0; x < width;)
+                for (int y = tempy - 2; y < tempy + 2; y++)
                 {
-                    int offset = y * stride + x * bytesPerPixel;
+                    if (y < 0 || y >= height) continue;
 
-                    Color pixel = GetColorFromOffset(bmpBytes, offset);
+                    // Reset the row's spans/heights to 1
+                    contiguousRangePairs.Add(y);
+                    contiguousRangePairs.Add(1);
 
-                    spanStart = x;
-                    x = IdentifySpan(bmpBytes, x, y, stride, width, bytesPerPixel, pixel);
+                    // Force refresh the entire row
+                    for (int x = 0; x < width;)
+                    {
+                        int offset = y * stride + x * bytesPerPixel;
 
-                    int spanLength = x - spanStart;
-                    int packedXYZ = PackXYZ(spanStart, y, spanLength);
-                    StoreSpan(rgbToSpans, pixel, packedXYZ);
+                        Color pixel = GetColorFromOffset(bmpBytes, offset);
+
+                        spanStart = x;
+                        x = IdentifySpan(bmpBytes, x, y, stride, width, bytesPerPixel, pixel);
+
+                        int spanLength = x - spanStart;
+                        int packedXYZ = PackXYZ(spanStart, y, spanLength);
+                        StoreSpan(rgbToSpans, pixel, packedXYZ);
+                    }
                 }
             }
 
@@ -416,23 +429,6 @@ namespace ResoniteNESApp
             return bmp;
         }
 
-        public static int GetRowHeight(int rowIndex)
-        {
-            if (rowIndex < 0 || rowIndex >= Form1.FRAME_HEIGHT)
-            {
-                Console.WriteLine("Invalid row index.");
-                return -1;
-            }
-
-            if (rowExpansionAmounts.ContainsKey(rowIndex))
-            {
-                return rowExpansionAmounts[rowIndex];
-            }
-            else
-            {
-                return 1;
-            }
-        }
 
         private static void InitializeRowExpansionAmounts()
         {
@@ -473,6 +469,7 @@ namespace ResoniteNESApp
 
             // Expand the row upwards based on its height.
             // Greater rowIndex means lower on the screen.
+            // TESTED WITH ROWHEIGHT = 1
             for (int y = rowIndex; y > rowIndex - rowHeight; y--)
             {
                 for (int x = 0; x < bitmap.Width; x++)
