@@ -242,6 +242,7 @@ namespace ResoniteNESApp
                 }
             }
 
+            /*
             // Get row range indices which were true in the previous frame but are not in the current frame
             var rowsToResetHeight = rowRangeEndIndices.Except(rowRangeEndIndicesCurrent).ToList();
             foreach (int rowIndex in rowsToResetHeight)
@@ -250,6 +251,7 @@ namespace ResoniteNESApp
                 contiguousRangePairs.Add(rowIndex);
                 contiguousRangePairs.Add(1);
             }
+            */
 
             // For the rows that are in skippedRows but not in skippedRowsCurrent (meaning these rows are no longer skipped), we need to "force refresh" them.
             // For those rows, we need to get the pixel values from _cachedBitmap and compare them to bmp, get that pixel change data,
@@ -259,10 +261,11 @@ namespace ResoniteNESApp
             foreach (int y in rowsToForceRefresh)
             {
                 
-                // Reset these rows' spans/heights to 1
+                // Reset the row's spans/heights to 1
                 contiguousRangePairs.Add(y);
                 contiguousRangePairs.Add(1);
 
+                // Force refresh the entire row
                 for (int x = 0; x < width;)
                 {
                     int offset = y * stride + x * bytesPerPixel;
@@ -459,7 +462,6 @@ namespace ResoniteNESApp
 
             // Expand the row upwards based on its height.
             // Greater rowIndex means lower on the screen.
-            List<int> updatedRows = new List<int>();
             for (int y = rowIndex; y > rowIndex - rowHeight; y--)
             {
                 for (int x = 0; x < bitmap.Width; x++)
@@ -467,7 +469,6 @@ namespace ResoniteNESApp
                     Color pixelColor = bitmap.GetPixel(x, rowIndex);
                     bitmap.SetPixel(x, y, pixelColor);
                 }
-                updatedRows.Add(y);
             }
             return;
         }
