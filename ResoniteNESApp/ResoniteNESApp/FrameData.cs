@@ -75,6 +75,33 @@ namespace ResoniteNESApp
             return packedXYZ % 1000;
         }
 
+        private static Color GetColorFromOffset(byte[] bytes, int offset)
+        {
+            return Color.FromArgb(bytes[offset + 2], bytes[offset + 1], bytes[offset]);
+        }
+
+        private static int IdentifySpan(byte[] bmpBytes, int x, int y, int stride, int width, int bytesPerPixel, Color targetColor)
+        {
+            int offset = y * stride + x * bytesPerPixel;
+            while (x < width && bmpBytes[offset + 2] == targetColor.R && bmpBytes[offset + 1] == targetColor.G && bmpBytes[offset] == targetColor.B)
+            {
+                x++;
+                offset = y * stride + x * bytesPerPixel;
+            }
+            return x; // returns the new 'x' after the span has been identified
+        }
+
+        private static void StoreSpan(Dictionary<int, List<int>> rgbToSpans, Color pixel, int packedXYZ)
+        {
+            int RGBIndex = GetIndexFromColor(pixel);
+            if (!rgbToSpans.TryGetValue(RGBIndex, out var spanList))
+            {
+                spanList = new List<int>();
+                rgbToSpans[RGBIndex] = spanList;
+            }
+            spanList.Add(packedXYZ);
+        }
+
         static public (List<int>, List<int>) GeneratePixelDataFromWindow(string targetWindowTitle, int titleBarHeight, int width, int height, bool forceFullFrame, double brightnessFactor, bool scanlinesEnabled, double darkenFactor)
         {
             Bitmap bmp = CaptureWindow(targetWindowTitle, titleBarHeight, brightnessFactor, scanlinesEnabled, darkenFactor);
@@ -118,30 +145,17 @@ namespace ResoniteNESApp
                 for (int x = 0; x < width;)
                 {
                     int offset = y * stride + x * bytesPerPixel;
-
-                    Color pixel = Color.FromArgb(bmpBytes[offset + 2], bmpBytes[offset + 1], bmpBytes[offset]);
+                    Color pixel = GetColorFromOffset(bmpBytes, offset);
                     Color currentPixel = Color.FromArgb(currentBmpBytes[offset + 2], currentBmpBytes[offset + 1], currentBmpBytes[offset]);
 
                     if (forceFullFrame || currentPixel.R != pixel.R || currentPixel.G != pixel.G || currentPixel.B != pixel.B)
                     {
                         spanStart = x;
 
-                        while (x < width && bmpBytes[offset + 2] == pixel.R && bmpBytes[offset + 1] == pixel.G && bmpBytes[offset] == pixel.B)
-                        {
-                            x++;
-                            offset = y * stride + x * bytesPerPixel;
-                        }
-
+                        x = IdentifySpan(bmpBytes, x, y, stride, width, bytesPerPixel, pixel);
                         int spanLength = x - spanStart;
                         int packedXYZ = PackXYZ(spanStart, y, spanLength);
-                        int RGBIndex = GetIndexFromColor(pixel);
-
-                        if (!rgbToSpans.TryGetValue(RGBIndex, out var spanList))
-                        {
-                            spanList = new List<int>();
-                            rgbToSpans[RGBIndex] = spanList;
-                        }
-                        spanList.Add(packedXYZ);
+                        StoreSpan(rgbToSpans, pixel, packedXYZ);
                         currentRowChanges.Add(packedXYZ);
                     }
                     else
@@ -234,25 +248,14 @@ namespace ResoniteNESApp
                 {
                     int offset = y * stride + x * bytesPerPixel;
 
-                    Color pixel = Color.FromArgb(bmpBytes[offset + 2], bmpBytes[offset + 1], bmpBytes[offset]);
+                    Color pixel = GetColorFromOffset(bmpBytes, offset);
 
                     spanStart = x;
-                    while (x < width && bmpBytes[offset + 2] == pixel.R && bmpBytes[offset + 1] == pixel.G && bmpBytes[offset] == pixel.B)
-                    {
-                        x++;
-                        offset = y * stride + x * bytesPerPixel;
-                    }
+                    x = IdentifySpan(bmpBytes, x, y, stride, width, bytesPerPixel, pixel);
 
                     int spanLength = x - spanStart;
                     int packedXYZ = PackXYZ(spanStart, y, spanLength);
-                    int RGBIndex = GetIndexFromColor(pixel);
-
-                    if (!rgbToSpans.TryGetValue(RGBIndex, out var spanList))
-                    {
-                        spanList = new List<int>();
-                        rgbToSpans[RGBIndex] = spanList;
-                    }
-                    spanList.Add(packedXYZ);
+                    StoreSpan(rgbToSpans, pixel, packedXYZ);
                 }
             }
 
