@@ -346,29 +346,33 @@ namespace ResoniteNESApp
             List<int> rowsToForceRefresh = newlyNotSkippedRows;
 
             //currentContiguousRangePairs.Clear();
-            
-            foreach (int y in rowsToForceRefresh)
+
+            foreach (int tempy in rowsToForceRefresh)
             {
-                if (y < 0 || y >= height) continue;
-
-                // Reset the row's spans/heights to 1
-                currentContiguousRangePairs.Add(y);
-                currentContiguousRangePairs.Add(1);
-
-                // Force refresh the entire row
-                for (int x = 0; x < width;)
+                for (int y = tempy - 2; y < tempy + 2; y++)
                 {
-                    int offset = y * stride + x * bytesPerPixel;
+                    if (y < 0 || y >= height) continue;
 
-                    Color pixel = GetColorFromOffset(bmpBytes, offset);
+                    // Reset the row's spans/heights to 1
+                    currentContiguousRangePairs.Add(y);
+                    currentContiguousRangePairs.Add(1);
 
-                    spanStart = x;
-                    x = IdentifySpan(bmpBytes, x, y, stride, width, bytesPerPixel, pixel);
+                    // Force refresh the entire row
+                    for (int x = 0; x < width;)
+                    {
+                        int offset = y * stride + x * bytesPerPixel;
 
-                    int spanLength = x - spanStart;
-                    int packedXYZ = PackXYZ(spanStart, y, spanLength);
-                    StoreSpan(rgbToSpans, pixel, packedXYZ);
+                        Color pixel = GetColorFromOffset(bmpBytes, offset);
+
+                        spanStart = x;
+                        x = IdentifySpan(bmpBytes, x, y, stride, width, bytesPerPixel, pixel);
+
+                        int spanLength = x - spanStart;
+                        int packedXYZ = PackXYZ(spanStart, y, spanLength);
+                        StoreSpan(rgbToSpans, pixel, packedXYZ);
+                    }
                 }
+
             }
 
             // Now write the pixel data to pixelDataList
