@@ -242,7 +242,6 @@ namespace ResoniteNESApp
                     if (currentPixel.R != pixel.R || currentPixel.G != pixel.G || currentPixel.B != pixel.B)
                     {
                         spanStart = x;
-
                         while (x < width && bmpBytes[offset + 2] == pixel.R && bmpBytes[offset + 1] == pixel.G && bmpBytes[offset] == pixel.B)
                         {
                             x++;
@@ -266,22 +265,7 @@ namespace ResoniteNESApp
                         x++;
                     }
                 }
-
-                /*
-                if (forceRefreshRowChanges.Any())
-                {
-                    foreach (var change in forceRefreshRowChanges)
-                    {
-                        int RGBIndex = GetIndexFromColor(Color.FromArgb(change & 0xFF, (change >> 8) & 0xFF, (change >> 16) & 0xFF));
-                        pixelDataList.Add(RGBIndex);
-                        pixelDataList.Add(change);
-                    }
-                    pixelDataList.Add(-forceRefreshRowChanges.Last());
-                }
-                */
             }
-
-
 
             // Now write the pixel data to pixelDataList
             foreach (var kvp in rgbToSpans)
@@ -299,7 +283,6 @@ namespace ResoniteNESApp
             Console.WriteLine("Contiguous identical row indices (" + contiguousIdenticalRows.Count + "): " + string.Join(", ", contiguousIdenticalRows));
 
             // Print the range pairs in one line
-            //Console.WriteLine("Contiguous row end and spans: (" + contiguousRangePairs.Count + "): " + string.Join(", ", contiguousRangePairs.Select(pair => $"({pair.Item1}, {pair.Item2})")));
             Console.WriteLine("Contiguous row end and spans: (" + contiguousRangePairs.Count + "): " + string.Join(", ", contiguousRangePairs));
 
             bmp.UnlockBits(bmpData);
@@ -488,7 +471,6 @@ namespace ResoniteNESApp
                     for (int x = xStart; x < xStart + spanLength; x++)
                     {
                         Color newPixelColor = GetColorFromIndex(colorIndex);
-                        //Color newPixelColor = _allColors[GetIndexFromColor(R, G, B)];
                         _simulatedCanvas.SetPixel(x, y, newPixelColor);
                         nPixelsChanged++;
                     }
