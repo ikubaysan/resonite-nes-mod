@@ -265,7 +265,9 @@ namespace ResoniteNESApp
             // For the rows that are in skippedRows but not in skippedRowsCurrent (meaning these rows are no longer skipped), we need to "force refresh" them.
             // For those rows, we need to get the pixel values from _cachedBitmap and compare them to bmp, get that pixel change data,
             // and add it to pixelDataList. There won't be any existing pixel change data for those rows because they were skipped.
-            var rowsToForceRefresh = skippedRows.Except(skippedRowsCurrent).ToList();
+
+            //var rowsToForceRefresh = skippedRows.Except(skippedRowsCurrent).ToList();
+            var rowsToForceRefresh = Enumerable.Range(0, height).ToList();
 
             foreach (int y in rowsToForceRefresh)
             {
