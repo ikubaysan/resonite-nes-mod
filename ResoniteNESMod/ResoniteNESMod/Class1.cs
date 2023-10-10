@@ -11,6 +11,8 @@ using FrooxEngine.UIX;
 using Elements.Core;
 using System.IO.MemoryMappedFiles;
 using System.IO;
+using System.Runtime.Remoting.Messaging;
+using Microsoft.SqlServer.Server;
 
 
 namespace ResoniteNESMod
@@ -113,6 +115,9 @@ namespace ResoniteNESMod
             private static DateTime latestInitializationAttempt = DateTime.MinValue;
             private static bool canvasModificationInProgress = false;
 
+            public static int[] readContiguousRangePairs;
+            private static int readContiguousRangePairsLength;
+
             private static MemoryMappedViewStream _memoryMappedViewStream;
             private static BinaryReader _binaryReader;
 
@@ -199,6 +204,7 @@ namespace ResoniteNESMod
                     // Destroying all the children is expensive, and usually if we get to this point then the next thing that could go wrong
                     // is not being able to find the memory mapped file, so we'll attempt to find the memory mapped file first.
                     readPixelData = new int[canvasSlotWidthCachedConfigOption * canvasSlotHeightCachedConfigOption];
+                    readContiguousRangePairs = new int[canvasSlotWidthCachedConfigOption * canvasSlotHeightCachedConfigOption];
 
                     _memoryMappedFile = MemoryMappedFile.OpenExisting(MemoryMappedFileName);
                     _memoryMappedViewStream = _memoryMappedFile.CreateViewStream();
@@ -369,6 +375,15 @@ namespace ResoniteNESMod
                         }
                         i++; // Skip the negative delimiter. We've hit a new color.
                     }
+
+                    for (i = 0; i < readContiguousRangePairsLength; i += 2)
+                    {
+                        int rowIndex = readContiguousRangePairs[i];
+                        int rowHeight = readContiguousRangePairs[i + 1];
+                        //SetRowHeight(rowIndex, rowHeight);
+                        horizontalLayoutComponentCache[rowIndex].PaddingTop.Value = rowIndex - rowHeight;
+                    }
+
                     WriteLatestReceivedFrameMillisecondsOffsetToMemoryMappedFile();
                     canvasModificationInProgress = false;
                 }
@@ -417,6 +432,15 @@ namespace ResoniteNESMod
                         }
 
                         latestReceivedFrameMillisecondsOffset = millisecondsOffset;
+
+                        // Read the count of contiguousRangePairs
+                        readContiguousRangePairsLength = _binaryReader.ReadInt32();
+
+                        // Now read the contiguousRangePairs, based on contiguousRangePairsCount
+                        for (int i = 0; i < readContiguousRangePairsLength; i++)
+                        {
+                            readContiguousRangePairs[i] = _binaryReader.ReadInt16();
+                        }
 
                         readPixelDataLength = _binaryReader.ReadInt32();
 

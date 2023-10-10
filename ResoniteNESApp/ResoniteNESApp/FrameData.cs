@@ -292,11 +292,18 @@ namespace ResoniteNESApp
             }
 
             // Populate rowsInContiguousRanges based on contiguousEndIndices and contiguousSpanLengths
+            int MIN_SPAN_LENGTH = 10;
             List<List<int>> rowsInContiguousRanges = new List<List<int>>();
             for (int i = 0; i < contiguousEndIndices.Count; i++)
             {
-                int endIndex = contiguousEndIndices[i];
                 int spanLength = contiguousSpanLengths[i];
+
+                // why does this cause graphical issues? 
+                // I'm just preventing adding from rowsInContiguousRanges, which populates skippedRows
+                // if (spanLength < MIN_SPAN_LENGTH) continue;
+
+                int endIndex = contiguousEndIndices[i];
+
 
                 List<int> currentRange = new List<int>();
                 for (int j = endIndex - spanLength + 1; j <= endIndex; j++)

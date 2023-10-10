@@ -42,3 +42,10 @@ Therefore, it's best to just attach an empty Animator component to the root of t
 
 ## FCEUX options
 Config > Enable > Background Input
+
+
+## Notes
+lower row indices are top
+higher row indices are bottom
+
+by default, PaddingTop is the HL index. Expand upwards 1 by subtracting 1 from PaddingTop.
