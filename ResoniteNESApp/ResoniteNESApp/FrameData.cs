@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace ResoniteNESApp
 {
-    internal class FrameData
+    public class FrameData
     {
 
         private static Dictionary<int, List<int>> rgbToSpans; // Map RGB values to spans
@@ -27,12 +27,12 @@ namespace ResoniteNESApp
             //initializeAllColors();
         }
 
-        static Int32 GetIndexFromColor(Color color)
+        public static Int32 GetIndexFromColor(Color color)
         {
             return color.R * 256 * 256 + color.G * 256 + color.B;
         }
 
-        static Color GetColorFromIndex(int index)
+        public static Color GetColorFromIndex(int index)
         {
             int r = index / (256 * 256);
             int g = (index / 256) % 256;
@@ -61,19 +61,99 @@ namespace ResoniteNESApp
             Y = (packedXYZ / 1000) % 1000;
             Z = packedXYZ % 1000;
         }
-        static int GetXFromPackedXYZ(Int32 packedXYZ)
-        {
-            return (packedXYZ / 1000000) % 1000;
-        }
 
-        static int GetYFromPackedXYZ(Int32 packedXYZ)
+        private static Bitmap CaptureWindow(string targetWindowTitle, int titleBarHeight, double brightnessFactor, bool scanlinesEnabled, double darkenFactor)
         {
-            return (packedXYZ / 1000) % 1000;
-        }
+            IntPtr hWnd = IntPtr.Zero;
+            NativeMethods.RECT rect = new NativeMethods.RECT { Top = 0, Left = 0, Right = 0, Bottom = 0 };
+            bool cachedRectSet = false;
 
-        static int GetZFromPackedXYZ(Int32 packedXYZ)
-        {
-            return packedXYZ % 1000;
+            // Check if the targetWindowTitle is the same as the cachedWindowTitle
+            if (cachedWindowTitle == targetWindowTitle)
+            {
+                hWnd = cachedWindowHandle;
+
+                // Check if the cached hWnd is still valid (the window is still open)
+                if (NativeMethods.GetWindowRect(hWnd, out rect))
+                {
+                    cachedRectSet = true;
+                }
+                else
+                {
+                    // Window is no longer open. Reset the cached handle and search again.
+                    cachedWindowHandle = IntPtr.Zero;
+                    cachedWindowTitle = "";
+                    hWnd = NativeMethods.FindWindowByTitleSubstring(targetWindowTitle);
+                }
+            }
+            else
+            {
+                hWnd = NativeMethods.FindWindowByTitleSubstring(targetWindowTitle);
+            }
+
+            // If a window handle was found, cache it for next time
+            if (hWnd != IntPtr.Zero)
+            {
+                cachedWindowHandle = hWnd;
+                cachedWindowTitle = targetWindowTitle;
+            }
+            else
+            {
+                Console.WriteLine("Window with title " + targetWindowTitle + " not found");
+                return null;
+            }
+
+            if (!cachedRectSet) NativeMethods.GetWindowRect(hWnd, out rect);
+
+            // Adjusting for the title bar and borders - these values are just placeholders
+            int borderWidth = 8;
+
+            int adjustedTop = rect.Top + titleBarHeight;
+            int adjustedLeft = rect.Left + borderWidth;
+            int adjustedRight = rect.Right - borderWidth;
+            int adjustedBottom = rect.Bottom;
+
+            int width = adjustedRight - adjustedLeft;
+            int height = adjustedBottom - adjustedTop;
+
+            Bitmap bmp = new Bitmap(Form1.FRAME_WIDTH, Form1.FRAME_HEIGHT, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            Graphics g = Graphics.FromImage(bmp);
+            g.CopyFromScreen(adjustedLeft, adjustedTop, 0, 0, new Size(width, height), CopyPixelOperation.SourceCopy);
+
+
+            if (Form1.brightnessFactor != 1.0)
+            {
+                for (int y = 0; y < bmp.Height; y++)
+                {
+                    for (int x = 0; x < bmp.Width; x++)
+                    {
+                        Color original = bmp.GetPixel(x, y);
+                        int newRed = Clamp((int)(original.R * brightnessFactor), 0, 255);
+                        int newGreen = Clamp((int)(original.G * brightnessFactor), 0, 255);
+                        int newBlue = Clamp((int)(original.B * brightnessFactor), 0, 255);
+
+                        bmp.SetPixel(x, y, Color.FromArgb(newRed, newGreen, newBlue));
+                    }
+                }
+            }
+
+            // Adding scanline effect
+            if (scanlinesEnabled && darkenFactor > 0.0)
+            {
+                for (int y = 0; y < bmp.Height; y += 2)
+                {
+                    for (int x = 0; x < bmp.Width; x++)
+                    {
+                        Color original = bmp.GetPixel(x, y);
+                        int newRed = (int)(original.R * (1 - darkenFactor));
+                        int newGreen = (int)(original.G * (1 - darkenFactor));
+                        int newBlue = (int)(original.B * (1 - darkenFactor));
+
+                        bmp.SetPixel(x, y, Color.FromArgb(newRed, newGreen, newBlue));
+                    }
+                }
+            }
+            return bmp;
         }
 
         private static Color GetColorFromOffset(byte[] bytes, int offset)
@@ -253,55 +333,34 @@ namespace ResoniteNESApp
                 }
             }
 
-            /*
-            // Get row range indices which were true in the previous frame but are not in the current frame
-            var rowsToResetHeight = rowRangeEndIndices.Except(rowRangeEndIndicesCurrent).ToList();
-            foreach (int rowIndex in rowsToResetHeight)
-            {
-                // Reset these rows' spans/heights to 1
-                contiguousRangePairs.Add(rowIndex);
-                contiguousRangePairs.Add(1);
-            }
-            */
-
             // For the rows that are in skippedRows but not in skippedRowsCurrent (meaning these rows are no longer skipped), we need to "force refresh" them.
             // For those rows, we need to get the pixel values from _cachedBitmap and compare them to bmp, get that pixel change data,
             // and add it to pixelDataList. There won't be any existing pixel change data for those rows because they were skipped.
 
-            //var rowsToForceRefresh = skippedRows.Except(skippedRowsCurrent).ToList();
-            //var rowsToForceRefresh = skippedRowsCurrent.Except(skippedRows).ToList();
-            
-            
             var newlyNotSkippedRows = skippedRows.Except(skippedRowsCurrent).ToList();
             var rowsToForceRefresh = newlyNotSkippedRows;
 
-            //var rowsToForceRefresh = Enumerable.Range(0, height).ToList();
-
-            foreach (int tempy in rowsToForceRefresh)
+            foreach (int y in rowsToForceRefresh)
             {
+                if (y < 0 || y >= height) continue;
 
-                for (int y = tempy - 2; y < tempy + 2; y++)
+                // Reset the row's spans/heights to 1
+                contiguousRangePairs.Add(y);
+                contiguousRangePairs.Add(1);
+
+                // Force refresh the entire row
+                for (int x = 0; x < width;)
                 {
-                    if (y < 0 || y >= height) continue;
+                    int offset = y * stride + x * bytesPerPixel;
 
-                    // Reset the row's spans/heights to 1
-                    contiguousRangePairs.Add(y);
-                    contiguousRangePairs.Add(1);
+                    Color pixel = GetColorFromOffset(bmpBytes, offset);
 
-                    // Force refresh the entire row
-                    for (int x = 0; x < width;)
-                    {
-                        int offset = y * stride + x * bytesPerPixel;
+                    spanStart = x;
+                    x = IdentifySpan(bmpBytes, x, y, stride, width, bytesPerPixel, pixel);
 
-                        Color pixel = GetColorFromOffset(bmpBytes, offset);
-
-                        spanStart = x;
-                        x = IdentifySpan(bmpBytes, x, y, stride, width, bytesPerPixel, pixel);
-
-                        int spanLength = x - spanStart;
-                        int packedXYZ = PackXYZ(spanStart, y, spanLength);
-                        StoreSpan(rgbToSpans, pixel, packedXYZ);
-                    }
+                    int spanLength = x - spanStart;
+                    int packedXYZ = PackXYZ(spanStart, y, spanLength);
+                    StoreSpan(rgbToSpans, pixel, packedXYZ);
                 }
             }
 
@@ -328,106 +387,20 @@ namespace ResoniteNESApp
 
             _cachedBitmap = bmp;
 
-            skippedRows = skippedRowsCurrent;
+            skippedRows = skippedRowsCurrent.Union(skippedRows).ToList();
+
+            foreach(int rowIndex in newlyNotSkippedRows)
+            {
+                if (!skippedRows.Contains(rowIndex)) continue;
+                skippedRows.Remove(rowIndex);
+            }
+
             rowRangeEndIndices = rowRangeEndIndicesCurrent;
 
             return (pixelDataList, contiguousRangePairs);
         }
 
 
-        private static Bitmap CaptureWindow(string targetWindowTitle, int titleBarHeight, double brightnessFactor, bool scanlinesEnabled, double darkenFactor)
-        {
-            IntPtr hWnd = IntPtr.Zero;
-            NativeMethods.RECT rect = new NativeMethods.RECT { Top = 0, Left = 0, Right = 0, Bottom = 0 };
-            bool cachedRectSet = false;
-
-            // Check if the targetWindowTitle is the same as the cachedWindowTitle
-            if (cachedWindowTitle == targetWindowTitle)
-            {
-                hWnd = cachedWindowHandle;
-
-                // Check if the cached hWnd is still valid (the window is still open)
-                if (NativeMethods.GetWindowRect(hWnd, out rect))
-                {
-                    cachedRectSet = true;
-                }
-                else
-                {
-                    // Window is no longer open. Reset the cached handle and search again.
-                    cachedWindowHandle = IntPtr.Zero;
-                    cachedWindowTitle = "";
-                    hWnd = NativeMethods.FindWindowByTitleSubstring(targetWindowTitle);
-                }
-            }
-            else
-            {
-                hWnd = NativeMethods.FindWindowByTitleSubstring(targetWindowTitle);
-            }
-
-            // If a window handle was found, cache it for next time
-            if (hWnd != IntPtr.Zero)
-            {
-                cachedWindowHandle = hWnd;
-                cachedWindowTitle = targetWindowTitle;
-            }
-            else
-            {
-                Console.WriteLine("Window with title " + targetWindowTitle + " not found");
-                return null;
-            }
-
-            if (!cachedRectSet) NativeMethods.GetWindowRect(hWnd, out rect);
-
-            // Adjusting for the title bar and borders - these values are just placeholders
-            int borderWidth = 8;
-
-            int adjustedTop = rect.Top + titleBarHeight;
-            int adjustedLeft = rect.Left + borderWidth;
-            int adjustedRight = rect.Right - borderWidth;
-            int adjustedBottom = rect.Bottom;
-
-            int width = adjustedRight - adjustedLeft;
-            int height = adjustedBottom - adjustedTop;
-
-            Bitmap bmp = new Bitmap(Form1.FRAME_WIDTH, Form1.FRAME_HEIGHT, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
-            Graphics g = Graphics.FromImage(bmp);
-            g.CopyFromScreen(adjustedLeft, adjustedTop, 0, 0, new Size(width, height), CopyPixelOperation.SourceCopy);
-
-
-            if (Form1.brightnessFactor != 1.0)
-            {
-                for (int y = 0; y < bmp.Height; y++)
-                {
-                    for (int x = 0; x < bmp.Width; x++)
-                    {
-                        Color original = bmp.GetPixel(x, y);
-                        int newRed = Clamp((int)(original.R * brightnessFactor), 0, 255);
-                        int newGreen = Clamp((int)(original.G * brightnessFactor), 0, 255);
-                        int newBlue = Clamp((int)(original.B * brightnessFactor), 0, 255);
-
-                        bmp.SetPixel(x, y, Color.FromArgb(newRed, newGreen, newBlue));
-                    }
-                }
-            }
-
-            // Adding scanline effect
-            if (scanlinesEnabled && darkenFactor > 0.0)
-            {
-                for (int y = 0; y < bmp.Height; y += 2)
-                {
-                    for (int x = 0; x < bmp.Width; x++)
-                    {
-                        Color original = bmp.GetPixel(x, y);
-                        int newRed = (int)(original.R * (1 - darkenFactor));
-                        int newGreen = (int)(original.G * (1 - darkenFactor));
-                        int newBlue = (int)(original.B * (1 - darkenFactor));
-
-                        bmp.SetPixel(x, y, Color.FromArgb(newRed, newGreen, newBlue));
-                    }
-                }
-            }
-            return bmp;
-        }
 
 
         private static void InitializeRowExpansionAmounts()
@@ -469,7 +442,6 @@ namespace ResoniteNESApp
 
             // Expand the row upwards based on its height.
             // Greater rowIndex means lower on the screen.
-            // TESTED WITH ROWHEIGHT = 1
             for (int y = rowIndex; y > rowIndex - rowHeight; y--)
             {
                 for (int x = 0; x < bitmap.Width; x++)
@@ -519,8 +491,34 @@ namespace ResoniteNESApp
                 SetRowHeight(rowIndex, rowHeight);
             }
 
+
             //SetRowHeight(239, 50);
             ApplyRowHeights(_simulatedCanvas);
+
+            /*
+            i = 0;
+            nPixelsChanged = 0;
+            while (i < MemoryMappedFileManager.readPixelDataLength)
+            {
+                int colorIndex = MemoryMappedFileManager.readPixelData[i++];
+
+                while (i < MemoryMappedFileManager.readPixelDataLength && MemoryMappedFileManager.readPixelData[i] >= 0)
+                {
+                    int packedxStartYSpan = MemoryMappedFileManager.readPixelData[i++];
+                    UnpackXYZ(packedxStartYSpan, out int xStart, out int y, out int spanLength);
+                    for (int x = xStart; x < xStart + spanLength; x++)
+                    {
+                        Color newPixelColor = GetColorFromIndex(colorIndex);
+                        _simulatedCanvas.SetPixel(x, y, newPixelColor);
+                        nPixelsChanged++;
+                    }
+                }
+                i++; // Skip the negative delimiter
+            }
+            */
+
+
+
 
             return _simulatedCanvas;
         }
