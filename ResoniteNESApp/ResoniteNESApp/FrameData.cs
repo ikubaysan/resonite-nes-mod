@@ -22,6 +22,7 @@ namespace ResoniteNESApp
         private static List<int> contiguousRangePairs = new List<int>();
         private static List<int> skippedRows = new List<int>();
         private static int[] rowContiguousSpanEndIndices = new int[Form1.FRAME_HEIGHT];
+        private static Dictionary<int, List<Color>> cachedRowPixels = new Dictionary<int, List<Color>>();
 
 
         static FrameData()
@@ -214,14 +215,18 @@ namespace ResoniteNESApp
 
             int stride = currentBmpData.Stride;
             int spanStart;
+            int offset;
 
             for (int y = 0; y < height; y++)
             {
+
+                if (skippedRows.Contains(y)) continue;
+
                 List<int> currentRowChanges = new List<int>();
 
                 for (int x = 0; x < width;)
                 {
-                    int offset = y * stride + x * bytesPerPixel;
+                    offset = y * stride + x * bytesPerPixel;
                     Color currentPixel = GetColorFromOffset(currentBmpBytes, offset);
                     Color cachedPixel = Color.FromArgb(cachedBmpBytes[offset + 2], cachedBmpBytes[offset + 1], cachedBmpBytes[offset]);
 
@@ -310,7 +315,7 @@ namespace ResoniteNESApp
             {
                 sb.AppendFormat("[End: {0}, Span: {1}], ", contiguousEndIndices[i], contiguousSpanLengths[i]);
             }
-            Console.WriteLine(sb.ToString().TrimEnd(',', ' '));
+            //Console.WriteLine(sb.ToString().TrimEnd(',', ' '));
 
             StringBuilder sbRows = new StringBuilder();
             List<int> currentSkippedRows = new List<int>();
@@ -322,7 +327,7 @@ namespace ResoniteNESApp
                     currentSkippedRows.Add(rowIndex);
                 }
             }
-            Console.WriteLine(sbRows.ToString().TrimEnd(',', ' '));
+            //Console.WriteLine(sbRows.ToString().TrimEnd(',', ' '));
 
 
             List<int> currentContiguousRangePairs = new List<int>();
@@ -337,34 +342,46 @@ namespace ResoniteNESApp
                 {
                     int rowIndex = contiguousEndIndices[i] - s;
                     if (rowContiguousSpanEndIndices[rowIndex] != contiguousEndIndices[i])
-                    { 
+                    {
                         rowContiguousSpanEndIndices[rowIndex] = contiguousEndIndices[i];
                         rowsWithChangedContiguousSpanEndIndex.Add(rowIndex);
-                        // At this point I should also cache the pixels of this row, so when this hits again for this row,
-                        // I can compare the current pixels with the cached pixels instead of needing to update the entire row.
+
+                        // Cache the pixels of this row
+                        List<Color> rowPixels = new List<Color>();
+                        for (int x = 0; x < width; x++)
+                        {
+                            offset = rowIndex * stride + x * bytesPerPixel;
+                            rowPixels.Add(GetColorFromOffset(currentBmpBytes, offset));
+                        }
+                        cachedRowPixels[rowIndex] = rowPixels;
                     }
                 }
             }
 
             List<int> newlyNotSkippedRows = skippedRows.Except(currentSkippedRows).ToList();
-            Console.WriteLine("Newly not skipped rows: (" + newlyNotSkippedRows.Count + ") " + string.Join(", ", newlyNotSkippedRows));
+            //Console.WriteLine("Newly not skipped rows: (" + newlyNotSkippedRows.Count + ") " + string.Join(", ", newlyNotSkippedRows));
             
-            List<int> rowsToForceRefresh = newlyNotSkippedRows;
+            List<int> rowsToRefresh = newlyNotSkippedRows;
 
-            // Add indices from rowsWithChangedContiguousSpanEndIndex to rowsToForceRefresh
+            // Add indices from rowsWithChangedContiguousSpanEndIndex to rowsToRefresh
             foreach (var rowIndex in rowsWithChangedContiguousSpanEndIndex)
             {
-                if (!rowsToForceRefresh.Contains(rowIndex))
+                if (!rowsToRefresh.Contains(rowIndex))
                 {
-                    rowsToForceRefresh.Add(rowIndex);
+                    rowsToRefresh.Add(rowIndex);
                 }
             }
 
-            Console.WriteLine("Rows to force refresh: (" + rowsToForceRefresh.Count + ") " + string.Join(", ", rowsToForceRefresh));
+            Console.WriteLine("Rows to refresh: (" + rowsToRefresh.Count + ") " + string.Join(", ", rowsToRefresh));
 
-            foreach (int y in rowsToForceRefresh)
+            int skippedPixels = 0;
+            int updatedPixels = 0;
+
+            foreach (int y in rowsToRefresh)
             {
                 if (y < 0 || y >= height) continue;
+
+                List<Color> previousPixels = cachedRowPixels.ContainsKey(y) ? cachedRowPixels[y] : null;
 
                 // Reset the row's spans/heights to 1
                 currentContiguousRangePairs.Add(y);
@@ -373,7 +390,22 @@ namespace ResoniteNESApp
                 // Force refresh the entire row
                 for (int x = 0; x < width;)
                 {
-                    int offset = y * stride + x * bytesPerPixel;
+
+                    if (previousPixels != null)
+                    {
+                        Color previousPixel = previousPixels[x];
+                        offset = y * stride + x * bytesPerPixel;
+                        Color currentPixel = GetColorFromOffset(currentBmpBytes, offset);
+
+                        if (currentPixel.R == previousPixel.R && currentPixel.G == previousPixel.G && currentPixel.B == previousPixel.B)
+                        {
+                            x++;
+                            skippedPixels++;
+                            continue;
+                        }
+                    }
+
+                    offset = y * stride + x * bytesPerPixel;
 
                     Color pixel = GetColorFromOffset(currentBmpBytes, offset);
 
@@ -383,8 +415,11 @@ namespace ResoniteNESApp
                     int spanLength = x - spanStart;
                     int packedXYZ = PackXYZ(spanStart, y, spanLength);
                     StoreSpan(rgbToSpans, pixel, packedXYZ);
+                    updatedPixels++;
                 }
             }
+
+            Console.WriteLine("Skipped pixels: " + skippedPixels + " , Updated pixels: " + updatedPixels);
 
             // Now write the pixel data to pixelDataList
             foreach (var kvp in rgbToSpans)
@@ -499,6 +534,8 @@ namespace ResoniteNESApp
                 int rowHeight = MemoryMappedFileManager.readContiguousRangePairs[i + 1];
                 SetRowHeight(rowIndex, rowHeight);
             }
+
+            Console.WriteLine("Pixels changed: " + nPixelsChanged);
 
             ApplyRowHeights(_simulatedCanvas);
             return _simulatedCanvas;
