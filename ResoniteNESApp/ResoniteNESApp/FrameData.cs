@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace ResoniteNESApp
 {
@@ -189,7 +190,7 @@ namespace ResoniteNESApp
         }
 
 
-        static public (List<int>, List<int>) GeneratePixelDataFromWindow(string targetWindowTitle, int titleBarHeight, int width, int height, bool forceFullFrame, double brightnessFactor, bool scanlinesEnabled, double darkenFactor)
+        static public (List<int>, List<int>) GeneratePixelDataFromWindow(string targetWindowTitle, int titleBarHeight, int width, int height, bool forceFullFrame, bool rowExpansionEnabled, double brightnessFactor, bool scanlinesEnabled, double darkenFactor)
         {
             Bitmap bmp = CaptureWindow(targetWindowTitle, titleBarHeight, brightnessFactor, scanlinesEnabled, darkenFactor);
             if (bmp == null)
@@ -275,7 +276,7 @@ namespace ResoniteNESApp
                 }
                 else
                 {
-                    if (currentSpanLength > 0)
+                    if (currentSpanLength > 0 && rowExpansionEnabled)
                     {
                         contiguousEndIndices.Add(y - 1);
                         contiguousSpanLengths.Add(currentSpanLength + 1); // +1 because it includes the start row as well
@@ -285,7 +286,7 @@ namespace ResoniteNESApp
             }
 
             // To capture the last segment if it's identical until the end
-            if (currentSpanLength > 0)
+            if (currentSpanLength > 0 && rowExpansionEnabled)
             {
                 contiguousEndIndices.Add(height - 1);
                 contiguousSpanLengths.Add(currentSpanLength + 1);
@@ -540,7 +541,8 @@ namespace ResoniteNESApp
                 SetRowHeight(rowIndex, rowHeight);
             }
 
-            Console.WriteLine("Pixels changed: " + nPixelsChanged);
+            Console.WriteLine("Preview pixels changed: " + nPixelsChanged);
+            Form1.latestPreviewPixelsChangedCount = nPixelsChanged;
 
             ApplyRowHeights(_simulatedCanvas);
             return _simulatedCanvas;

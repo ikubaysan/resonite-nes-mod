@@ -38,6 +38,7 @@ namespace ResoniteNESApp
         private Timer _fpsTimer;
 
         private DateTime _lastTickTime = DateTime.Now;
+        public static int latestPreviewPixelsChangedCount = 0;
 
         public Form1()
         {
@@ -88,7 +89,7 @@ namespace ResoniteNESApp
             MemoryMappedFileManager._lastFrameTime = DateTime.Now;
 
             // Generate pixel data (SLOW)
-            var(pixelData, contiguousRangePairs) = FrameData.GeneratePixelDataFromWindow(targetWindowTitle, titleBarHeight,  FRAME_WIDTH, FRAME_HEIGHT, forceFullFrame, brightnessFactor, scanlinesEnabled, darkenFactor);
+            var(pixelData, contiguousRangePairs) = FrameData.GeneratePixelDataFromWindow(targetWindowTitle, titleBarHeight,  FRAME_WIDTH, FRAME_HEIGHT, forceFullFrame, rowExpansionCheckBox.Checked, brightnessFactor, scanlinesEnabled, darkenFactor);
             if (pixelData == null) return;
 
             // Write to MemoryMappedFile
@@ -108,6 +109,7 @@ namespace ResoniteNESApp
             {
                 // Preview is enabled, so convert pixel data to Bitmap and set to PictureBox (SLOW)
                 pictureBox1.Image = FrameData.SetPixelDataToBitmap(FRAME_WIDTH, FRAME_HEIGHT);
+                previewPixelsChangedCountLabel.Text = latestPreviewPixelsChangedCount.ToString();
             }
 
             if (checkBox4.Checked)

@@ -37,6 +37,7 @@
             this.label1 = new System.Windows.Forms.Label();
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.tabPage1 = new System.Windows.Forms.TabPage();
+            this.rowExpansionCheckBox = new System.Windows.Forms.CheckBox();
             this.publishedFPSLabel = new System.Windows.Forms.Label();
             this.label10 = new System.Windows.Forms.Label();
             this.label9 = new System.Windows.Forms.Label();
@@ -58,6 +59,8 @@
             this.checkBox1 = new System.Windows.Forms.CheckBox();
             this.label2 = new System.Windows.Forms.Label();
             this.tabPage2 = new System.Windows.Forms.TabPage();
+            this.previewPixelsChangedCountLabel = new System.Windows.Forms.Label();
+            this.label12 = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             this.tabControl1.SuspendLayout();
             this.tabPage1.SuspendLayout();
@@ -122,6 +125,9 @@
             // 
             // tabPage1
             // 
+            this.tabPage1.Controls.Add(this.previewPixelsChangedCountLabel);
+            this.tabPage1.Controls.Add(this.label12);
+            this.tabPage1.Controls.Add(this.rowExpansionCheckBox);
             this.tabPage1.Controls.Add(this.publishedFPSLabel);
             this.tabPage1.Controls.Add(this.label10);
             this.tabPage1.Controls.Add(this.label9);
@@ -155,11 +161,23 @@
             this.tabPage1.Text = "tabPage1";
             this.tabPage1.UseVisualStyleBackColor = true;
             // 
-            // label11
+            // rowExpansionCheckBox
+            // 
+            this.rowExpansionCheckBox.AutoSize = true;
+            this.rowExpansionCheckBox.Checked = true;
+            this.rowExpansionCheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.rowExpansionCheckBox.Location = new System.Drawing.Point(258, 176);
+            this.rowExpansionCheckBox.Name = "rowExpansionCheckBox";
+            this.rowExpansionCheckBox.Size = new System.Drawing.Size(100, 17);
+            this.rowExpansionCheckBox.TabIndex = 27;
+            this.rowExpansionCheckBox.Text = "Row Expansion";
+            this.rowExpansionCheckBox.UseVisualStyleBackColor = true;
+            // 
+            // publishedFPSLabel
             // 
             this.publishedFPSLabel.AutoSize = true;
-            this.publishedFPSLabel.Location = new System.Drawing.Point(337, 88);
-            this.publishedFPSLabel.Name = "label11";
+            this.publishedFPSLabel.Location = new System.Drawing.Point(337, 52);
+            this.publishedFPSLabel.Name = "publishedFPSLabel";
             this.publishedFPSLabel.Size = new System.Drawing.Size(13, 13);
             this.publishedFPSLabel.TabIndex = 26;
             this.publishedFPSLabel.Text = "0";
@@ -167,7 +185,7 @@
             // label10
             // 
             this.label10.AutoSize = true;
-            this.label10.Location = new System.Drawing.Point(255, 88);
+            this.label10.Location = new System.Drawing.Point(255, 52);
             this.label10.Name = "label10";
             this.label10.Size = new System.Drawing.Size(79, 13);
             this.label10.TabIndex = 25;
@@ -233,7 +251,7 @@
             // checkBox4
             // 
             this.checkBox4.AutoSize = true;
-            this.checkBox4.Location = new System.Drawing.Point(258, 168);
+            this.checkBox4.Location = new System.Drawing.Point(258, 140);
             this.checkBox4.Name = "checkBox4";
             this.checkBox4.Size = new System.Drawing.Size(156, 30);
             this.checkBox4.TabIndex = 18;
@@ -243,7 +261,7 @@
             // checkBox3
             // 
             this.checkBox3.AutoSize = true;
-            this.checkBox3.Location = new System.Drawing.Point(258, 122);
+            this.checkBox3.Location = new System.Drawing.Point(258, 104);
             this.checkBox3.Name = "checkBox3";
             this.checkBox3.Size = new System.Drawing.Size(111, 30);
             this.checkBox3.TabIndex = 17;
@@ -355,6 +373,24 @@
             this.tabPage2.Text = "tabPage2";
             this.tabPage2.UseVisualStyleBackColor = true;
             // 
+            // previewPixelsChangedCountLabel
+            // 
+            this.previewPixelsChangedCountLabel.AutoSize = true;
+            this.previewPixelsChangedCountLabel.Location = new System.Drawing.Point(337, 78);
+            this.previewPixelsChangedCountLabel.Name = "previewPixelsChangedCountLabel";
+            this.previewPixelsChangedCountLabel.Size = new System.Drawing.Size(13, 13);
+            this.previewPixelsChangedCountLabel.TabIndex = 29;
+            this.previewPixelsChangedCountLabel.Text = "0";
+            // 
+            // label12
+            // 
+            this.label12.AutoSize = true;
+            this.label12.Location = new System.Drawing.Point(255, 78);
+            this.label12.Name = "label12";
+            this.label12.Size = new System.Drawing.Size(83, 13);
+            this.label12.TabIndex = 28;
+            this.label12.Text = "Pixels Changed:";
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -404,6 +440,9 @@
         private System.Windows.Forms.TextBox textBox2;
         private System.Windows.Forms.Label publishedFPSLabel;
         private System.Windows.Forms.Label label10;
+        private System.Windows.Forms.CheckBox rowExpansionCheckBox;
+        private System.Windows.Forms.Label previewPixelsChangedCountLabel;
+        private System.Windows.Forms.Label label12;
     }
 }
 
