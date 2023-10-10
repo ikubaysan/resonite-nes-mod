@@ -18,8 +18,9 @@ namespace ResoniteNESApp
         private static IntPtr cachedWindowHandle = IntPtr.Zero;
         private static string cachedWindowTitle = "";
         private static Dictionary<int, int> rowExpansionAmounts = null;
-        private static List<int> skippedRows = new List<int>();
         private static List<int> rowRangeEndIndices = new List<int>();
+        private static List<int> contiguousRangePairs = new List<int>();
+        private static List<int> skippedRows = new List<int>();
 
 
         static FrameData()
@@ -185,6 +186,7 @@ namespace ResoniteNESApp
             spanList.Add(packedXYZ);
         }
 
+
         static public (List<int>, List<int>) GeneratePixelDataFromWindow(string targetWindowTitle, int titleBarHeight, int width, int height, bool forceFullFrame, double brightnessFactor, bool scanlinesEnabled, double darkenFactor)
         {
             Bitmap bmp = CaptureWindow(targetWindowTitle, titleBarHeight, brightnessFactor, scanlinesEnabled, darkenFactor);
@@ -197,8 +199,6 @@ namespace ResoniteNESApp
 
             rgbToSpans = new Dictionary<int, List<int>>();
 
-            Dictionary<int, List<int>> rowChanges = new Dictionary<int, List<int>>();
-            List<int> contiguousIdenticalRows = new List<int>();
 
             // Use BitmapData for faster pixel access
             BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.ReadOnly, bmp.PixelFormat);
@@ -215,14 +215,10 @@ namespace ResoniteNESApp
             int stride = bmpData.Stride;
             int spanStart;
 
-            List<int> previousRowChanges = null;
             List<int> contiguousSegmentStarts = new List<int>();
 
             for (int y = 0; y < height; y++)
             {
-
-                if (skippedRows.Contains(y)) continue;
-
                 List<int> currentRowChanges = new List<int>();
 
                 for (int x = 0; x < width;)
@@ -246,107 +242,118 @@ namespace ResoniteNESApp
                         x++;
                     }
                 }
+            }
 
-                rowChanges[y] = currentRowChanges;
+            List<int> contiguousEndIndices = new List<int>();
+            List<int> contiguousSpanLengths = new List<int>();
 
-                if (currentRowChanges.Count == 0)
+            int currentSpanLength = 0;
+
+            for (int y = 1; y < height; y++) // Start from 1 because we compare with the previous row
+            {
+                bool rowsAreIdentical = true;
+
+                for (int x = 0; x < width && rowsAreIdentical; x++)
                 {
-                    if (contiguousSegmentStarts.Count > 0)
+                    int offsetCurrent = y * stride + x * bytesPerPixel;
+                    int offsetPrevious = (y - 1) * stride + x * bytesPerPixel;
+
+                    Color pixelCurrent = GetColorFromOffset(bmpBytes, offsetCurrent);
+                    Color pixelPrevious = GetColorFromOffset(bmpBytes, offsetPrevious);
+
+                    if (pixelCurrent.R != pixelPrevious.R ||
+                        pixelCurrent.G != pixelPrevious.G ||
+                        pixelCurrent.B != pixelPrevious.B)
                     {
-                        contiguousIdenticalRows.AddRange(contiguousSegmentStarts);
-                        contiguousSegmentStarts.Clear();
+                        rowsAreIdentical = false;
                     }
                 }
-                else if (previousRowChanges == null || !currentRowChanges.SequenceEqual(previousRowChanges))
+
+                if (rowsAreIdentical)
                 {
-                    if (contiguousSegmentStarts.Count > 0)
-                    {
-                        contiguousIdenticalRows.AddRange(contiguousSegmentStarts);
-                    }
-                    contiguousSegmentStarts.Clear();
-                    contiguousSegmentStarts.Add(y);
+                    currentSpanLength++;
                 }
                 else
                 {
-                    contiguousSegmentStarts.Add(y);
-                }
-
-                previousRowChanges = currentRowChanges;
-            }
-
-            // I think this is right...
-            if (contiguousSegmentStarts.Count > 0)
-            {
-                contiguousIdenticalRows.AddRange(contiguousSegmentStarts);
-            }
-
-            //contiguousIdenticalRows.Clear();
-
-            // Post processing the contiguousIdenticalRows list to obtain pairs
-            List<int> rowRangeEndIndicesCurrent = new List<int>();
-            List<int> skippedRowsCurrent = new List<int>();
-            List<int> contiguousRangePairs = new List<int>();
-
-            int? previousValue = null;
-            int rowRangeEndIndex, span;
-            spanStart = -1;
-            foreach (int currentValue in contiguousIdenticalRows)
-            {
-                if (previousValue == null)
-                {
-                    spanStart = currentValue;
-                }
-                else if (currentValue - previousValue.Value > 1)
-                {
-                    rowRangeEndIndex = previousValue.Value;
-                    rowRangeEndIndicesCurrent.Add(rowRangeEndIndex);
-                    span = rowRangeEndIndex - spanStart + 1;
-
-                    contiguousRangePairs.Add(rowRangeEndIndex);
-                    contiguousRangePairs.Add(span);
-
-                    spanStart = currentValue;
-
-                    // TODO: Take note for accuracy
-                    for (int i = rowRangeEndIndex; i > rowRangeEndIndex - span; i--)
+                    if (currentSpanLength > 0)
                     {
-                        skippedRowsCurrent.Add(i);
+                        contiguousEndIndices.Add(y - 1);
+                        contiguousSpanLengths.Add(currentSpanLength + 1); // +1 because it includes the start row as well
+                        currentSpanLength = 0; // Reset
                     }
-
                 }
-                previousValue = currentValue;
             }
 
-            if (previousValue != null)
+            // To capture the last segment if it's identical until the end
+            if (currentSpanLength > 0)
             {
-                rowRangeEndIndex = previousValue.Value;
-                rowRangeEndIndicesCurrent.Add(rowRangeEndIndex);
-                span = previousValue.Value - spanStart + 1;
-
-                contiguousRangePairs.Add(rowRangeEndIndex);
-                contiguousRangePairs.Add(span);
-
-                // TODO: Take note for accuracy
-                for (int i = rowRangeEndIndex; i > rowRangeEndIndex - span; i--)
-                {
-                    skippedRowsCurrent.Add(i);
-                }
+                contiguousEndIndices.Add(height - 1);
+                contiguousSpanLengths.Add(currentSpanLength + 1);
             }
 
-            // For the rows that are in skippedRows but not in skippedRowsCurrent (meaning these rows are no longer skipped), we need to "force refresh" them.
+            // Populate rowsInContiguousRanges based on contiguousEndIndices and contiguousSpanLengths
+            List<List<int>> rowsInContiguousRanges = new List<List<int>>();
+            for (int i = 0; i < contiguousEndIndices.Count; i++)
+            {
+                int endIndex = contiguousEndIndices[i];
+                int spanLength = contiguousSpanLengths[i];
+
+                List<int> currentRange = new List<int>();
+                for (int j = endIndex - spanLength + 1; j <= endIndex; j++)
+                {
+                    currentRange.Add(j);
+                }
+                rowsInContiguousRanges.Add(currentRange);
+            }
+
+            // Print the data
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < contiguousEndIndices.Count; i++)
+            {
+                sb.AppendFormat("[End: {0}, Span: {1}], ", contiguousEndIndices[i], contiguousSpanLengths[i]);
+            }
+            Console.WriteLine(sb.ToString().TrimEnd(',', ' '));
+
+            StringBuilder sbRows = new StringBuilder();
+            List<int> currentSkippedRows = new List<int>();
+            foreach (var range in rowsInContiguousRanges)
+            {
+                foreach (var rowIndex in range)
+                {
+                    sbRows.AppendFormat("{0}, ", rowIndex);
+                    currentSkippedRows.Add(rowIndex);
+                }
+            }
+            Console.WriteLine(sbRows.ToString().TrimEnd(',', ' '));
+
+
+            List<int> currentContiguousRangePairs = new List<int>();
+            for (int i = 0; i < contiguousEndIndices.Count; i++)
+            {
+                currentContiguousRangePairs.Add(contiguousEndIndices[i]);
+                currentContiguousRangePairs.Add(contiguousSpanLengths[i]);
+            }
+
+            // For the rows that are in skippedRows but not in currentSkippedRows (meaning these rows are no longer skipped), we need to "force refresh" them.
             // For those rows, we need to get the pixel values from _cachedBitmap and compare them to bmp, get that pixel change data,
             // and add it to pixelDataList. There won't be any existing pixel change data for those rows because they were skipped.
 
-            var newlyNotSkippedRows = skippedRows.Except(skippedRowsCurrent).ToList();
-            var rowsToForceRefresh = newlyNotSkippedRows;
+            List<int> newlyNotSkippedRows = skippedRows.Except(currentSkippedRows).ToList();
 
+            Console.WriteLine("Newly not skipped rows: (" + newlyNotSkippedRows.Count + ") " + string.Join(", ", newlyNotSkippedRows));
+            
+            //List<int> rowsToForceRefresh = Enumerable.Range(0, 240).ToList();
+            List<int> rowsToForceRefresh = newlyNotSkippedRows;
+
+            //currentContiguousRangePairs.Clear();
+            
             foreach (int y in rowsToForceRefresh)
             {
                 if (y < 0 || y >= height) continue;
 
                 // Reset the row's spans/heights to 1
-                contiguousRangePairs.Add(y);
-                contiguousRangePairs.Add(1);
+                currentContiguousRangePairs.Add(y);
+                currentContiguousRangePairs.Add(1);
 
                 // Force refresh the entire row
                 for (int x = 0; x < width;)
@@ -377,29 +384,18 @@ namespace ResoniteNESApp
             }
 
             // Print contiguous identical row indices
-            Console.WriteLine("Contiguous identical row indices (" + contiguousIdenticalRows.Count + "): " + string.Join(", ", contiguousIdenticalRows));
+            //Console.WriteLine("Contiguous identical row indices (" + contiguousIdenticalRows.Count + "): " + string.Join(", ", contiguousIdenticalRows));
 
             // Print the range pairs in one line
-            Console.WriteLine("Contiguous row end and spans: (" + contiguousRangePairs.Count + "): " + string.Join(", ", contiguousRangePairs));
+            Console.WriteLine("Contiguous row end and spans: (" + currentContiguousRangePairs.Count + "): " + string.Join(", ", currentContiguousRangePairs));
 
             bmp.UnlockBits(bmpData);
             _cachedBitmap.UnlockBits(cachedBmpData);
-
             _cachedBitmap = bmp;
 
-            skippedRows = skippedRowsCurrent.Union(skippedRows).ToList();
-
-            foreach(int rowIndex in newlyNotSkippedRows)
-            {
-                if (!skippedRows.Contains(rowIndex)) continue;
-                skippedRows.Remove(rowIndex);
-            }
-
-            rowRangeEndIndices = rowRangeEndIndicesCurrent;
-
+            contiguousRangePairs = currentContiguousRangePairs;
             return (pixelDataList, contiguousRangePairs);
         }
-
 
 
 

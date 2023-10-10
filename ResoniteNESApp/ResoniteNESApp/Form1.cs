@@ -27,7 +27,6 @@ namespace ResoniteNESApp
         private int fullFrameInterval = 30 * 1000; // 30 seconds in milliseconds
         private DateTime _lastFullFrameTime = DateTime.MinValue;
         private DateTime programStartTime;
-        private List<int> pixelData;
 
         public static double brightnessFactor = 1.0;
         public double darkenFactor = 0.0;
