@@ -13,12 +13,13 @@ namespace ResoniteNESApp
     {
 
         private static Dictionary<int, List<int>> rgbToSpans; // Map RGB values to spans
-        private static Bitmap _currentBitmap = new Bitmap(Form1.FRAME_WIDTH, Form1.FRAME_HEIGHT);
+        private static Bitmap _cachedBitmap = new Bitmap(Form1.FRAME_WIDTH, Form1.FRAME_HEIGHT);
         private static Bitmap _simulatedCanvas = new Bitmap(Form1.FRAME_WIDTH, Form1.FRAME_HEIGHT);
         private static IntPtr cachedWindowHandle = IntPtr.Zero;
         private static string cachedWindowTitle = "";
-        private static Dictionary<int, int> rowExpansionAmounts = new Dictionary<int, int>();
+        private static Dictionary<int, int> rowExpansionAmounts = null;
         private static List<int> skippedRows = new List<int>();
+        private static List<int> rowRangeEndIndices = new List<int>();
 
 
         static FrameData()
@@ -119,14 +120,14 @@ namespace ResoniteNESApp
 
             // Use BitmapData for faster pixel access
             BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.ReadOnly, bmp.PixelFormat);
-            BitmapData currentBmpData = _currentBitmap.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.ReadOnly, _currentBitmap.PixelFormat);
+            BitmapData cachedBmpData = _cachedBitmap.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.ReadOnly, _cachedBitmap.PixelFormat);
 
             int bytesPerPixel = Image.GetPixelFormatSize(bmp.PixelFormat) / 8;
             byte[] bmpBytes = new byte[width * height * bytesPerPixel];
             byte[] currentBmpBytes = new byte[width * height * bytesPerPixel];
 
             Marshal.Copy(bmpData.Scan0, bmpBytes, 0, bmpBytes.Length);
-            Marshal.Copy(currentBmpData.Scan0, currentBmpBytes, 0, currentBmpBytes.Length);
+            Marshal.Copy(cachedBmpData.Scan0, currentBmpBytes, 0, currentBmpBytes.Length);
 
             int length = bmpBytes.Length;
             int stride = bmpData.Stride;
@@ -191,10 +192,10 @@ namespace ResoniteNESApp
                 previousRowChanges = currentRowChanges;
             }
 
-
             //contiguousIdenticalRows.Clear();
 
             // Post processing the contiguousIdenticalRows list to obtain pairs
+            List<int> rowRangeEndIndicesCurrent = new List<int>();
             List<int> skippedRowsCurrent = new List<int>();
             List<int> contiguousRangePairs = new List<int>();
 
@@ -210,9 +211,10 @@ namespace ResoniteNESApp
                 else if (currentValue - previousValue.Value > 1)
                 {
                     rowRangeEndIndex = previousValue.Value;
+                    rowRangeEndIndicesCurrent.Add(rowRangeEndIndex);
                     span = rowRangeEndIndex - spanStart + 1;
-                    contiguousRangePairs.Add(rowRangeEndIndex);
-                    contiguousRangePairs.Add(span);
+                    contiguousRangePairs.Add(rowRangeEndIndex + 1);
+                    contiguousRangePairs.Add(span + 1);
                     spanStart = currentValue;
 
                     // TODO: Take note for accuracy
@@ -228,9 +230,10 @@ namespace ResoniteNESApp
             if (previousValue != null)
             {
                 rowRangeEndIndex = previousValue.Value;
+                rowRangeEndIndicesCurrent.Add(rowRangeEndIndex);
                 span = previousValue.Value - spanStart + 1;
-                contiguousRangePairs.Add(rowRangeEndIndex);
-                contiguousRangePairs.Add(span);
+                contiguousRangePairs.Add(rowRangeEndIndex + 1);
+                contiguousRangePairs.Add(span + 1);
 
                 // TODO: Take note for accuracy
                 for (int i = rowRangeEndIndex; i > rowRangeEndIndex - span; i--)
@@ -239,14 +242,27 @@ namespace ResoniteNESApp
                 }
             }
 
-            // For the rows that are in skippedRows but not in skippedRowsCurrent, we need to "force refresh" them.
-            // For those rows, we need to get the pixel values from _currentBitmap and compare them to bmp, get that pixel change data,
+            // Get row range indices which were true in the previous frame but are not in the current frame
+            var rowsToResetHeight = rowRangeEndIndices.Except(rowRangeEndIndicesCurrent).ToList();
+            foreach (int rowIndex in rowsToResetHeight)
+            {
+                // Reset these rows' spans/heights to 1
+                contiguousRangePairs.Add(rowIndex);
+                contiguousRangePairs.Add(1);
+            }
+
+            // For the rows that are in skippedRows but not in skippedRowsCurrent (meaning these rows are no longer skipped), we need to "force refresh" them.
+            // For those rows, we need to get the pixel values from _cachedBitmap and compare them to bmp, get that pixel change data,
             // and add it to pixelDataList. There won't be any existing pixel change data for those rows because they were skipped.
             var rowsToForceRefresh = skippedRows.Except(skippedRowsCurrent).ToList();
 
-
             foreach (int y in rowsToForceRefresh)
             {
+                
+                // Reset these rows' spans/heights to 1
+                contiguousRangePairs.Add(y);
+                contiguousRangePairs.Add(1);
+
                 for (int x = 0; x < width;)
                 {
                     int offset = y * stride + x * bytesPerPixel;
@@ -281,11 +297,12 @@ namespace ResoniteNESApp
             Console.WriteLine("Contiguous row end and spans: (" + contiguousRangePairs.Count + "): " + string.Join(", ", contiguousRangePairs));
 
             bmp.UnlockBits(bmpData);
-            _currentBitmap.UnlockBits(currentBmpData);
+            _cachedBitmap.UnlockBits(cachedBmpData);
 
-            _currentBitmap = bmp;
+            _cachedBitmap = bmp;
 
             skippedRows = skippedRowsCurrent;
+            rowRangeEndIndices = rowRangeEndIndicesCurrent;
 
             return (pixelDataList, contiguousRangePairs);
         }
@@ -403,6 +420,16 @@ namespace ResoniteNESApp
             }
         }
 
+        private static void InitializeRowExpansionAmounts()
+        {
+            rowExpansionAmounts = new Dictionary<int, int>();
+            for (int i = 0; i < Form1.FRAME_HEIGHT; i++)
+            {
+                rowExpansionAmounts[i] = 1;
+            }
+        }
+   
+
 
         private static void SetRowHeight(int rowIndex, int rowHeight)
         {
@@ -453,6 +480,9 @@ namespace ResoniteNESApp
 
         public static Bitmap SetPixelDataToBitmap(int width, int height)
         {
+
+            if (rowExpansionAmounts == null) InitializeRowExpansionAmounts();
+
             int i = 0;
             int nPixelsChanged = 0;
             while (i < MemoryMappedFileManager.readPixelDataLength)
@@ -473,20 +503,12 @@ namespace ResoniteNESApp
                 i++; // Skip the negative delimiter
             }
 
-
-            for (int j = 0; j < Form1.FRAME_HEIGHT; j++)
-            {
-                SetRowHeight(j, 1);
-            }
-
-            
             for (i = 0; i < MemoryMappedFileManager.readContiguousRangePairsLength; i += 2)
             {
                 int rowIndex = MemoryMappedFileManager.readContiguousRangePairs[i];
                 int rowHeight = MemoryMappedFileManager.readContiguousRangePairs[i + 1];
                 SetRowHeight(rowIndex, rowHeight);
             }
-            
 
             //SetRowHeight(239, 50);
             ApplyRowHeights(_simulatedCanvas);
