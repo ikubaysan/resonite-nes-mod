@@ -37,6 +37,10 @@
             this.label1 = new System.Windows.Forms.Label();
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.tabPage1 = new System.Windows.Forms.TabPage();
+            this.canvasWidthLabel = new System.Windows.Forms.Label();
+            this.canvasWidthTextBox = new System.Windows.Forms.TextBox();
+            this.canvasHeightLabel = new System.Windows.Forms.Label();
+            this.canvasHeightTextBox = new System.Windows.Forms.TextBox();
             this.label11 = new System.Windows.Forms.Label();
             this.borderWidthTextBox = new System.Windows.Forms.TextBox();
             this.previewPixelsChangedCountLabel = new System.Windows.Forms.Label();
@@ -84,7 +88,7 @@
             // 
             // button1
             // 
-            this.button1.Location = new System.Drawing.Point(9, 227);
+            this.button1.Location = new System.Drawing.Point(6, 158);
             this.button1.Name = "button1";
             this.button1.Size = new System.Drawing.Size(75, 23);
             this.button1.TabIndex = 2;
@@ -109,7 +113,7 @@
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(6, 268);
+            this.label1.Location = new System.Drawing.Point(8, 184);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(125, 13);
             this.label1.TabIndex = 5;
@@ -127,6 +131,10 @@
             // 
             // tabPage1
             // 
+            this.tabPage1.Controls.Add(this.canvasWidthLabel);
+            this.tabPage1.Controls.Add(this.canvasWidthTextBox);
+            this.tabPage1.Controls.Add(this.canvasHeightLabel);
+            this.tabPage1.Controls.Add(this.canvasHeightTextBox);
             this.tabPage1.Controls.Add(this.label11);
             this.tabPage1.Controls.Add(this.borderWidthTextBox);
             this.tabPage1.Controls.Add(this.previewPixelsChangedCountLabel);
@@ -164,6 +172,42 @@
             this.tabPage1.TabIndex = 0;
             this.tabPage1.Text = "tabPage1";
             this.tabPage1.UseVisualStyleBackColor = true;
+            // 
+            // canvasWidthLabel
+            // 
+            this.canvasWidthLabel.AutoSize = true;
+            this.canvasWidthLabel.Location = new System.Drawing.Point(8, 227);
+            this.canvasWidthLabel.Name = "canvasWidthLabel";
+            this.canvasWidthLabel.Size = new System.Drawing.Size(74, 13);
+            this.canvasWidthLabel.TabIndex = 35;
+            this.canvasWidthLabel.Text = "Canvas Width";
+            // 
+            // canvasWidthTextBox
+            // 
+            this.canvasWidthTextBox.Location = new System.Drawing.Point(3, 246);
+            this.canvasWidthTextBox.Name = "canvasWidthTextBox";
+            this.canvasWidthTextBox.Size = new System.Drawing.Size(100, 20);
+            this.canvasWidthTextBox.TabIndex = 34;
+            this.canvasWidthTextBox.Text = "256";
+            this.canvasWidthTextBox.TextChanged += new System.EventHandler(this.canvasWidthTextBox_TextChanged);
+            // 
+            // canvasHeightLabel
+            // 
+            this.canvasHeightLabel.AutoSize = true;
+            this.canvasHeightLabel.Location = new System.Drawing.Point(8, 279);
+            this.canvasHeightLabel.Name = "canvasHeightLabel";
+            this.canvasHeightLabel.Size = new System.Drawing.Size(77, 13);
+            this.canvasHeightLabel.TabIndex = 33;
+            this.canvasHeightLabel.Text = "Canvas Height";
+            // 
+            // canvasHeightTextBox
+            // 
+            this.canvasHeightTextBox.Location = new System.Drawing.Point(3, 298);
+            this.canvasHeightTextBox.Name = "canvasHeightTextBox";
+            this.canvasHeightTextBox.Size = new System.Drawing.Size(100, 20);
+            this.canvasHeightTextBox.TabIndex = 32;
+            this.canvasHeightTextBox.Text = "240";
+            this.canvasHeightTextBox.TextChanged += new System.EventHandler(this.canvasHeightTextBox_TextChanged);
             // 
             // label11
             // 
@@ -466,6 +510,10 @@
         private System.Windows.Forms.Label label12;
         private System.Windows.Forms.Label label11;
         private System.Windows.Forms.TextBox borderWidthTextBox;
+        private System.Windows.Forms.Label canvasWidthLabel;
+        private System.Windows.Forms.TextBox canvasWidthTextBox;
+        private System.Windows.Forms.Label canvasHeightLabel;
+        private System.Windows.Forms.TextBox canvasHeightTextBox;
     }
 }
 

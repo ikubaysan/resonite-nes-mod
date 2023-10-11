@@ -43,6 +43,7 @@ namespace ResoniteNESMod
         // Fixed size array for all possible RGB values
         private static colorX[] _allColors;
         private static bool _allColorsInitialized = false;
+        private static bool _reInitializeNeeded = false;
 
         public override void OnEngineInit()
         {
@@ -86,6 +87,22 @@ namespace ResoniteNESMod
 
         private static void UpdateCachedConfigOptions()
         {
+
+            int newCanvasSlotWidth = Config.GetValue(CANVAS_SLOT_WIDTH);
+            int newCanvasSlotHeight = Config.GetValue(CANVAS_SLOT_HEIGHT);
+            bool dimensionsAreValid = newCanvasSlotWidth > 0 && newCanvasSlotHeight > 0 && newCanvasSlotWidth <= 999 && newCanvasSlotHeight <= 999;
+
+            if (dimensionsAreValid && newCanvasSlotWidth != canvasSlotWidthCachedConfigOption || newCanvasSlotHeight != canvasSlotHeightCachedConfigOption)
+            {
+                Msg("Canvas dimensions have been modified and are valid, re-initialization of canvas is needed");
+                _reInitializeNeeded = true;
+            }
+            else
+            {
+                Msg("Canvas dimensions have not been modified or are invalid, re-initialization of canvas is not needed");
+                _reInitializeNeeded = false;
+            }
+
             enabledCachedConfigOption = Config.GetValue(ENABLED);
             canvasSlotWidthCachedConfigOption = Config.GetValue(CANVAS_SLOT_WIDTH);
             canvasSlotHeightCachedConfigOption = Config.GetValue(CANVAS_SLOT_HEIGHT);
@@ -141,7 +158,7 @@ namespace ResoniteNESMod
                         Msg("Set initialized to false");
                     }
 
-                    if (!initialized)
+                    if (!initialized || _reInitializeNeeded)
                     {
                         if ((DateTime.UtcNow - latestInitializationAttempt).TotalSeconds < 30) return;
                         Msg("Canvas must be initialized");
@@ -157,6 +174,7 @@ namespace ResoniteNESMod
                             return;
                         }
                         initialized = true;
+                        _reInitializeNeeded = false;
                     }
                 }
                 static void InitializeCanvas(Canvas __instance)

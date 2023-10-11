@@ -18,11 +18,13 @@ namespace ResoniteNESApp
     {
         private Timer _timer;
         private Random _random;
-        public const int FRAME_WIDTH = 256;
-        public const int FRAME_HEIGHT = 240;
+        private int MAX_FRAME_WIDTH = 999;
+        private int MAX_FRAME_HEIGHT = 999;
+        public static int FRAME_WIDTH = 256;
+        public static int FRAME_HEIGHT = 240;
         private int TargetFramerate = 36;
 
-        private const int PixelDataMemoryMappedFileSize = ((FRAME_WIDTH * FRAME_HEIGHT * 2) + 3) * sizeof(int);
+        private int PixelDataMemoryMappedFileSize;
 
         private int fullFrameInterval = 30 * 1000; // 30 seconds in milliseconds
         private DateTime _lastFullFrameTime = DateTime.MinValue;
@@ -48,6 +50,20 @@ namespace ResoniteNESApp
             programStartTime = DateTime.Now;
         }
 
+        private void InitializeCanvas()
+        {
+            PixelDataMemoryMappedFileSize = ((MAX_FRAME_WIDTH * MAX_FRAME_HEIGHT * 2) + 3) * sizeof(int);
+            pictureBox1.Width = FRAME_WIDTH;
+            pictureBox1.Height = FRAME_HEIGHT;
+
+            FrameData._cachedBitmap = new Bitmap(FRAME_WIDTH, FRAME_HEIGHT);
+            FrameData._simulatedCanvas = new Bitmap(FRAME_WIDTH, FRAME_HEIGHT);
+            FrameData.rowContiguousSpanEndIndices = new int[FRAME_HEIGHT];
+
+            MemoryMappedFileManager.readContiguousRangePairs = new int[FRAME_WIDTH * FRAME_HEIGHT];
+            MemoryMappedFileManager.readPixelData = new int[FRAME_WIDTH * FRAME_HEIGHT];
+    }
+
         private void Form1_Load(object sender, EventArgs e)
         {
             _timer = new Timer();
@@ -60,9 +76,7 @@ namespace ResoniteNESApp
             _fpsTimer.Tick += FpsTimer_Tick;
             _fpsTimer.Start();
 
-            pictureBox1.Width = FRAME_WIDTH;
-            pictureBox1.Height = FRAME_HEIGHT;
-
+            InitializeCanvas();
             Console.WriteLine("Form loaded with Timer Interval: " + _timer.Interval);
         }
 
@@ -203,5 +217,24 @@ namespace ResoniteNESApp
             if (int.TryParse(borderWidthTextBox.Text, out int selectedBorderWidth) && selectedBorderWidth >= 1)
                 borderWidth = selectedBorderWidth;
         }
+
+        private void canvasWidthTextBox_TextChanged(object sender, EventArgs e)
+        {
+            if (int.TryParse(canvasWidthTextBox.Text, out int selectedCanvasWidth) && selectedCanvasWidth >= 1 && selectedCanvasWidth <= 999)
+            {
+                FRAME_WIDTH = selectedCanvasWidth;
+                InitializeCanvas();
+            }
+        }
+
+        private void canvasHeightTextBox_TextChanged(object sender, EventArgs e)
+        {
+            if (int.TryParse(canvasHeightTextBox.Text, out int selectedCanvasHeight) && selectedCanvasHeight >= 1 && selectedCanvasHeight <= 999)
+            {
+                FRAME_HEIGHT = selectedCanvasHeight;
+                InitializeCanvas();
+            }
+        }
+
     }
 }

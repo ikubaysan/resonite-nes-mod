@@ -12,23 +12,32 @@ namespace ResoniteNESApp
 {
     public class FrameData
     {
+        public static Bitmap _cachedBitmap;
+        public static Bitmap _simulatedCanvas;
+        public static int[] rowContiguousSpanEndIndices;
 
         private static Dictionary<int, List<int>> rgbToSpans; // Map RGB values to spans
-        private static Bitmap _cachedBitmap = new Bitmap(Form1.FRAME_WIDTH, Form1.FRAME_HEIGHT);
-        private static Bitmap _simulatedCanvas = new Bitmap(Form1.FRAME_WIDTH, Form1.FRAME_HEIGHT);
-        private static int[] rowContiguousSpanEndIndices = new int[Form1.FRAME_HEIGHT];
         private static IntPtr cachedWindowHandle = IntPtr.Zero;
         private static string cachedWindowTitle = "";
-        private static Dictionary<int, int> rowExpansionAmounts = null;
-        private static List<int> rowRangeEndIndices = new List<int>();
-        private static List<int> contiguousRangePairs = new List<int>();
-        private static List<int> skippedRows = new List<int>();
-        private static Dictionary<int, List<Color>> cachedRowPixels = new Dictionary<int, List<Color>>();
+
+        private static Dictionary<int, int> rowExpansionAmounts;
+        private static List<int> contiguousRangePairs;
+        private static List<int> skippedRows;
+        private static Dictionary<int, List<Color>> cachedRowPixels;
 
 
         static FrameData()
         {
             //initializeAllColors();
+            Initialize();
+        }
+
+        public static void Initialize()
+        {
+            rowExpansionAmounts = null;
+            contiguousRangePairs = new List<int>();
+            skippedRows = new List<int>();
+            cachedRowPixels = new Dictionary<int, List<Color>>();
         }
 
         public static Int32 GetIndexFromColor(Color color)

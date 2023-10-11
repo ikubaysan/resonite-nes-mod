@@ -25,8 +25,8 @@ namespace ResoniteNESApp
         public static int readPixelDataLength;
         public static int readContiguousRangePairsLength;
         public static DateTime _lastFrameTime = DateTime.MinValue;
-        public static int[] readContiguousRangePairs = new int[Form1.FRAME_WIDTH * Form1.FRAME_HEIGHT];
-        public static int[] readPixelData = new int[Form1.FRAME_WIDTH * Form1.FRAME_HEIGHT];
+        public static int[] readContiguousRangePairs;
+        public static int[] readPixelData;
         private static bool forceRefreshedFrameFromMMF;
 
         public static bool clientRenderConfirmed()
