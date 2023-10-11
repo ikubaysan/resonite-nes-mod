@@ -16,13 +16,13 @@ namespace ResoniteNESApp
         private static Dictionary<int, List<int>> rgbToSpans; // Map RGB values to spans
         private static Bitmap _cachedBitmap = new Bitmap(Form1.FRAME_WIDTH, Form1.FRAME_HEIGHT);
         private static Bitmap _simulatedCanvas = new Bitmap(Form1.FRAME_WIDTH, Form1.FRAME_HEIGHT);
+        private static int[] rowContiguousSpanEndIndices = new int[Form1.FRAME_HEIGHT];
         private static IntPtr cachedWindowHandle = IntPtr.Zero;
         private static string cachedWindowTitle = "";
         private static Dictionary<int, int> rowExpansionAmounts = null;
         private static List<int> rowRangeEndIndices = new List<int>();
         private static List<int> contiguousRangePairs = new List<int>();
         private static List<int> skippedRows = new List<int>();
-        private static int[] rowContiguousSpanEndIndices = new int[Form1.FRAME_HEIGHT];
         private static Dictionary<int, List<Color>> cachedRowPixels = new Dictionary<int, List<Color>>();
 
 
@@ -66,7 +66,7 @@ namespace ResoniteNESApp
             Z = packedXYZ % 1000;
         }
 
-        private static Bitmap CaptureWindow(string targetWindowTitle, int titleBarHeight, double brightnessFactor, bool scanlinesEnabled, double darkenFactor)
+        private static Bitmap CaptureWindow(string targetWindowTitle, int borderWidth, int titleBarHeight, double brightnessFactor, bool scanlinesEnabled, double darkenFactor)
         {
             IntPtr hWnd = IntPtr.Zero;
             NativeMethods.RECT rect = new NativeMethods.RECT { Top = 0, Left = 0, Right = 0, Bottom = 0 };
@@ -110,8 +110,6 @@ namespace ResoniteNESApp
             if (!cachedRectSet) NativeMethods.GetWindowRect(hWnd, out rect);
 
             // Adjusting for the title bar and borders - these values are just placeholders
-            int borderWidth = 8;
-
             int adjustedTop = rect.Top + titleBarHeight;
             int adjustedLeft = rect.Left + borderWidth;
             int adjustedRight = rect.Right - borderWidth;
@@ -190,9 +188,9 @@ namespace ResoniteNESApp
         }
 
 
-        static public (List<int>, List<int>) GeneratePixelDataFromWindow(string targetWindowTitle, int titleBarHeight, int width, int height, bool forceFullFrame, bool rowExpansionEnabled, double brightnessFactor, bool scanlinesEnabled, double darkenFactor)
+        static public (List<int>, List<int>) GeneratePixelDataFromWindow(string targetWindowTitle, int borderWidth, int titleBarHeight, int width, int height, bool forceFullFrame, bool rowExpansionEnabled, double brightnessFactor, bool scanlinesEnabled, double darkenFactor)
         {
-            Bitmap bmp = CaptureWindow(targetWindowTitle, titleBarHeight, brightnessFactor, scanlinesEnabled, darkenFactor);
+            Bitmap bmp = CaptureWindow(targetWindowTitle, borderWidth, titleBarHeight, brightnessFactor, scanlinesEnabled, darkenFactor);
             if (bmp == null)
             {
                 return (null, null);
@@ -276,7 +274,7 @@ namespace ResoniteNESApp
                 }
                 else
                 {
-                    if (currentSpanLength > 0 && rowExpansionEnabled)
+                    if (currentSpanLength > 0 && rowExpansionEnabled && !forceFullFrame)
                     {
                         contiguousEndIndices.Add(y - 1);
                         contiguousSpanLengths.Add(currentSpanLength + 1); // +1 because it includes the start row as well
@@ -286,14 +284,14 @@ namespace ResoniteNESApp
             }
 
             // To capture the last segment if it's identical until the end
-            if (currentSpanLength > 0 && rowExpansionEnabled)
+            if (currentSpanLength > 0 && rowExpansionEnabled && !forceFullFrame)
             {
                 contiguousEndIndices.Add(height - 1);
                 contiguousSpanLengths.Add(currentSpanLength + 1);
             }
 
             // Populate rowsInContiguousRanges based on contiguousEndIndices and contiguousSpanLengths
-            int MIN_SPAN_LENGTH = 10;
+            //int MIN_SPAN_LENGTH = 10;
             List<List<int>> rowsInContiguousRanges = new List<List<int>>();
             for (int i = 0; i < contiguousEndIndices.Count; i++)
             {

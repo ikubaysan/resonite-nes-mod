@@ -37,6 +37,10 @@
             this.label1 = new System.Windows.Forms.Label();
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.tabPage1 = new System.Windows.Forms.TabPage();
+            this.label11 = new System.Windows.Forms.Label();
+            this.borderWidthTextBox = new System.Windows.Forms.TextBox();
+            this.previewPixelsChangedCountLabel = new System.Windows.Forms.Label();
+            this.label12 = new System.Windows.Forms.Label();
             this.rowExpansionCheckBox = new System.Windows.Forms.CheckBox();
             this.publishedFPSLabel = new System.Windows.Forms.Label();
             this.label10 = new System.Windows.Forms.Label();
@@ -59,8 +63,6 @@
             this.checkBox1 = new System.Windows.Forms.CheckBox();
             this.label2 = new System.Windows.Forms.Label();
             this.tabPage2 = new System.Windows.Forms.TabPage();
-            this.previewPixelsChangedCountLabel = new System.Windows.Forms.Label();
-            this.label12 = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             this.tabControl1.SuspendLayout();
             this.tabPage1.SuspendLayout();
@@ -82,7 +84,7 @@
             // 
             // button1
             // 
-            this.button1.Location = new System.Drawing.Point(39, 227);
+            this.button1.Location = new System.Drawing.Point(9, 227);
             this.button1.Name = "button1";
             this.button1.Size = new System.Drawing.Size(75, 23);
             this.button1.TabIndex = 2;
@@ -107,7 +109,7 @@
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(25, 274);
+            this.label1.Location = new System.Drawing.Point(6, 268);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(125, 13);
             this.label1.TabIndex = 5;
@@ -125,6 +127,8 @@
             // 
             // tabPage1
             // 
+            this.tabPage1.Controls.Add(this.label11);
+            this.tabPage1.Controls.Add(this.borderWidthTextBox);
             this.tabPage1.Controls.Add(this.previewPixelsChangedCountLabel);
             this.tabPage1.Controls.Add(this.label12);
             this.tabPage1.Controls.Add(this.rowExpansionCheckBox);
@@ -161,12 +165,48 @@
             this.tabPage1.Text = "tabPage1";
             this.tabPage1.UseVisualStyleBackColor = true;
             // 
+            // label11
+            // 
+            this.label11.AutoSize = true;
+            this.label11.Location = new System.Drawing.Point(270, 175);
+            this.label11.Name = "label11";
+            this.label11.Size = new System.Drawing.Size(69, 13);
+            this.label11.TabIndex = 31;
+            this.label11.Text = "Border Width";
+            // 
+            // borderWidthTextBox
+            // 
+            this.borderWidthTextBox.Location = new System.Drawing.Point(265, 194);
+            this.borderWidthTextBox.Name = "borderWidthTextBox";
+            this.borderWidthTextBox.Size = new System.Drawing.Size(100, 20);
+            this.borderWidthTextBox.TabIndex = 30;
+            this.borderWidthTextBox.Text = "8";
+            this.borderWidthTextBox.TextChanged += new System.EventHandler(this.borderWidthTextBox_TextChanged);
+            // 
+            // previewPixelsChangedCountLabel
+            // 
+            this.previewPixelsChangedCountLabel.AutoSize = true;
+            this.previewPixelsChangedCountLabel.Location = new System.Drawing.Point(337, 42);
+            this.previewPixelsChangedCountLabel.Name = "previewPixelsChangedCountLabel";
+            this.previewPixelsChangedCountLabel.Size = new System.Drawing.Size(13, 13);
+            this.previewPixelsChangedCountLabel.TabIndex = 29;
+            this.previewPixelsChangedCountLabel.Text = "0";
+            // 
+            // label12
+            // 
+            this.label12.AutoSize = true;
+            this.label12.Location = new System.Drawing.Point(255, 42);
+            this.label12.Name = "label12";
+            this.label12.Size = new System.Drawing.Size(83, 13);
+            this.label12.TabIndex = 28;
+            this.label12.Text = "Pixels Changed:";
+            // 
             // rowExpansionCheckBox
             // 
             this.rowExpansionCheckBox.AutoSize = true;
             this.rowExpansionCheckBox.Checked = true;
             this.rowExpansionCheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.rowExpansionCheckBox.Location = new System.Drawing.Point(258, 176);
+            this.rowExpansionCheckBox.Location = new System.Drawing.Point(258, 140);
             this.rowExpansionCheckBox.Name = "rowExpansionCheckBox";
             this.rowExpansionCheckBox.Size = new System.Drawing.Size(100, 17);
             this.rowExpansionCheckBox.TabIndex = 27;
@@ -176,7 +216,7 @@
             // publishedFPSLabel
             // 
             this.publishedFPSLabel.AutoSize = true;
-            this.publishedFPSLabel.Location = new System.Drawing.Point(337, 52);
+            this.publishedFPSLabel.Location = new System.Drawing.Point(337, 16);
             this.publishedFPSLabel.Name = "publishedFPSLabel";
             this.publishedFPSLabel.Size = new System.Drawing.Size(13, 13);
             this.publishedFPSLabel.TabIndex = 26;
@@ -185,7 +225,7 @@
             // label10
             // 
             this.label10.AutoSize = true;
-            this.label10.Location = new System.Drawing.Point(255, 52);
+            this.label10.Location = new System.Drawing.Point(255, 16);
             this.label10.Name = "label10";
             this.label10.Size = new System.Drawing.Size(79, 13);
             this.label10.TabIndex = 25;
@@ -207,7 +247,6 @@
             this.textBox2.Size = new System.Drawing.Size(100, 20);
             this.textBox2.TabIndex = 23;
             this.textBox2.Text = "30";
-            this.textBox2.TextChanged += new System.EventHandler(this.textBox2_TextChanged_1);
             // 
             // label7
             // 
@@ -251,7 +290,7 @@
             // checkBox4
             // 
             this.checkBox4.AutoSize = true;
-            this.checkBox4.Location = new System.Drawing.Point(258, 140);
+            this.checkBox4.Location = new System.Drawing.Point(258, 104);
             this.checkBox4.Name = "checkBox4";
             this.checkBox4.Size = new System.Drawing.Size(156, 30);
             this.checkBox4.TabIndex = 18;
@@ -261,7 +300,7 @@
             // checkBox3
             // 
             this.checkBox3.AutoSize = true;
-            this.checkBox3.Location = new System.Drawing.Point(258, 104);
+            this.checkBox3.Location = new System.Drawing.Point(258, 68);
             this.checkBox3.Name = "checkBox3";
             this.checkBox3.Size = new System.Drawing.Size(111, 30);
             this.checkBox3.TabIndex = 17;
@@ -373,24 +412,6 @@
             this.tabPage2.Text = "tabPage2";
             this.tabPage2.UseVisualStyleBackColor = true;
             // 
-            // previewPixelsChangedCountLabel
-            // 
-            this.previewPixelsChangedCountLabel.AutoSize = true;
-            this.previewPixelsChangedCountLabel.Location = new System.Drawing.Point(337, 78);
-            this.previewPixelsChangedCountLabel.Name = "previewPixelsChangedCountLabel";
-            this.previewPixelsChangedCountLabel.Size = new System.Drawing.Size(13, 13);
-            this.previewPixelsChangedCountLabel.TabIndex = 29;
-            this.previewPixelsChangedCountLabel.Text = "0";
-            // 
-            // label12
-            // 
-            this.label12.AutoSize = true;
-            this.label12.Location = new System.Drawing.Point(255, 78);
-            this.label12.Name = "label12";
-            this.label12.Size = new System.Drawing.Size(83, 13);
-            this.label12.TabIndex = 28;
-            this.label12.Text = "Pixels Changed:";
-            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -443,6 +464,8 @@
         private System.Windows.Forms.CheckBox rowExpansionCheckBox;
         private System.Windows.Forms.Label previewPixelsChangedCountLabel;
         private System.Windows.Forms.Label label12;
+        private System.Windows.Forms.Label label11;
+        private System.Windows.Forms.TextBox borderWidthTextBox;
     }
 }
 

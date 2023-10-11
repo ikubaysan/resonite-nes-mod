@@ -33,6 +33,7 @@ namespace ResoniteNESApp
         public bool scanlinesEnabled = true;
         public string targetWindowTitle = "FCEUX";
         private int titleBarHeight = 30;
+        private int borderWidth = 8;
 
         private int _frameCounter = 0;
         private Timer _fpsTimer;
@@ -89,7 +90,7 @@ namespace ResoniteNESApp
             MemoryMappedFileManager._lastFrameTime = DateTime.Now;
 
             // Generate pixel data (SLOW)
-            var(pixelData, contiguousRangePairs) = FrameData.GeneratePixelDataFromWindow(targetWindowTitle, titleBarHeight,  FRAME_WIDTH, FRAME_HEIGHT, forceFullFrame, rowExpansionCheckBox.Checked, brightnessFactor, scanlinesEnabled, darkenFactor);
+            var(pixelData, contiguousRangePairs) = FrameData.GeneratePixelDataFromWindow(targetWindowTitle, borderWidth, titleBarHeight,  FRAME_WIDTH, FRAME_HEIGHT, forceFullFrame, rowExpansionCheckBox.Checked, brightnessFactor, scanlinesEnabled, darkenFactor);
             if (pixelData == null) return;
 
             // Write to MemoryMappedFile
@@ -197,10 +198,10 @@ namespace ResoniteNESApp
                 fullFrameInterval = selectedFullFrameInterval * 1000;
         }
 
-        private void textBox2_TextChanged_1(object sender, EventArgs e)
+        private void borderWidthTextBox_TextChanged(object sender, EventArgs e)
         {
-            if (int.TryParse(textBox2.Text, out int selectedtitleBarHeight) && selectedtitleBarHeight >= 1)
-                titleBarHeight = selectedtitleBarHeight;
+            if (int.TryParse(borderWidthTextBox.Text, out int selectedBorderWidth) && selectedBorderWidth >= 1)
+                borderWidth = selectedBorderWidth;
         }
     }
 }
