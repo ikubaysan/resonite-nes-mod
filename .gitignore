@@ -3,3 +3,14 @@
 ################################################################################
 
 /.vs
+/ResoniteNESMod/ResoniteNESMod/bin
+/ResoniteNESMod/ResoniteNESMod/obj
+/ResoniteNESMod/.vs/ResoniteNESMod/v17
+/ResoniteNESMod/.vs/ResoniteNESMod/FileContentIndex
+
+/ResoniteNESApp/ResoniteNESApp/bin
+/ResoniteNESApp/ResoniteNESApp/obj
+/ResoniteNESApp/.vs/ResoniteNESApp/v17
+/ResoniteNESApp/.vs/ResoniteNESApp/FileContentIndex
+/ResoniteNESApp/ResoniteNESAppTests/bin/Debug
+/ResoniteNESApp/ResoniteNESAppTests/obj/Debug
