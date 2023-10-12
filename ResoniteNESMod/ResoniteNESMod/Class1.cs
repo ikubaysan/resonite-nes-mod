@@ -13,7 +13,7 @@ using System.IO.MemoryMappedFiles;
 using System.IO;
 using System.Runtime.Remoting.Messaging;
 using Microsoft.SqlServer.Server;
-
+using FrooxEngine.ProtoFlux.CoreNodes;
 
 namespace ResoniteNESMod
 {
@@ -104,8 +104,16 @@ namespace ResoniteNESMod
             }
 
             enabledCachedConfigOption = Config.GetValue(ENABLED);
-            canvasSlotWidthCachedConfigOption = Config.GetValue(CANVAS_SLOT_WIDTH);
-            canvasSlotHeightCachedConfigOption = Config.GetValue(CANVAS_SLOT_HEIGHT);
+            if (dimensionsAreValid)
+            {
+                canvasSlotWidthCachedConfigOption = Config.GetValue(CANVAS_SLOT_WIDTH);
+                canvasSlotHeightCachedConfigOption = Config.GetValue(CANVAS_SLOT_HEIGHT);
+            }
+            else
+            {
+                Msg("Canvas dimensions are invalid, not updating canvasSlotWidthCachedConfigOption and canvasSlotHeightCachedConfigOption");
+            }
+
             canvasSlotNameCachedConfigOption = Config.GetValue(CANVAS_SLOT_NAME);
             Msg("Updated cached config options");
             Msg("enabledCachedConfigOption: " + enabledCachedConfigOption);
