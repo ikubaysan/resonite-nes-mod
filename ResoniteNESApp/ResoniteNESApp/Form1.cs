@@ -220,7 +220,7 @@ namespace ResoniteNESApp
 
         private void canvasWidthTextBox_TextChanged(object sender, EventArgs e)
         {
-            if (int.TryParse(canvasWidthTextBox.Text, out int selectedCanvasWidth) && selectedCanvasWidth >= 1 && selectedCanvasWidth <= 999)
+            if (int.TryParse(canvasWidthTextBox.Text, out int selectedCanvasWidth) && selectedCanvasWidth >= 100 && selectedCanvasWidth <= 999)
             {
                 FRAME_WIDTH = selectedCanvasWidth;
                 InitializeCanvas();
@@ -229,7 +229,7 @@ namespace ResoniteNESApp
 
         private void canvasHeightTextBox_TextChanged(object sender, EventArgs e)
         {
-            if (int.TryParse(canvasHeightTextBox.Text, out int selectedCanvasHeight) && selectedCanvasHeight >= 1 && selectedCanvasHeight <= 999)
+            if (int.TryParse(canvasHeightTextBox.Text, out int selectedCanvasHeight) && selectedCanvasHeight >= 100 && selectedCanvasHeight <= 999)
             {
                 FRAME_HEIGHT = selectedCanvasHeight;
                 InitializeCanvas();
