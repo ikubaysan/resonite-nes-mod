@@ -90,7 +90,7 @@ namespace ResoniteNESMod
 
             int newCanvasSlotWidth = Config.GetValue(CANVAS_SLOT_WIDTH);
             int newCanvasSlotHeight = Config.GetValue(CANVAS_SLOT_HEIGHT);
-            bool dimensionsAreValid = newCanvasSlotWidth > 0 && newCanvasSlotHeight > 0 && newCanvasSlotWidth <= 999 && newCanvasSlotHeight <= 999;
+            bool dimensionsAreValid = newCanvasSlotWidth > 0 && newCanvasSlotHeight > 0 && newCanvasSlotWidth <= 999 && newCanvasSlotHeight <= 999 && newCanvasSlotWidth >= 100 && newCanvasSlotHeight <= 100;
 
             if (dimensionsAreValid && newCanvasSlotWidth != canvasSlotWidthCachedConfigOption || newCanvasSlotHeight != canvasSlotHeightCachedConfigOption)
             {
