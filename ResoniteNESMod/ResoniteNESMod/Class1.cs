@@ -14,6 +14,7 @@ using System.IO;
 using System.Runtime.Remoting.Messaging;
 using Microsoft.SqlServer.Server;
 using FrooxEngine.ProtoFlux.CoreNodes;
+using Elements.Assets;
 
 namespace ResoniteNESMod
 {
@@ -200,32 +201,20 @@ namespace ResoniteNESMod
 
                     Msg("Changed the slot name to: " + __instance.Slot.Name);
 
-                    Slot backgroundSlot = __instance.Slot.FindChild("Background");
-                    if (backgroundSlot == null)
+                    Slot gameTextureSlot = __instance.Slot.FindChild("GameTexture");
+                    if (gameTextureSlot == null)
                     {
-                        Msg("Could not find the child slot: Background");
+                        Msg("Could not find the child slot: GameTexture");
                         return;
                     }
 
-                    Msg("Found the child slot: " + backgroundSlot.Name);
 
-                    Slot imageSlot = backgroundSlot.FindChild("Image");
-                    if (imageSlot == null)
-                    {
-                        Msg("Could not find the child slot: Image");
-                        return;
-                    }
+                    StaticTexture2D textureComponent = gameTextureSlot.GetComponent<StaticTexture2D>();
+                    
+                    //Bitmap2D bitmap = textureComponent.Bui
 
-                    Msg("Found the child slot: " + imageSlot.Name);
 
-                    Slot contentSlot = imageSlot.FindChild("Content");
-                    if (contentSlot == null)
-                    {
-                        Msg("Could not find the child slot: Content");
-                        return;
-                    }
 
-                    Msg("Found the child slot: " + contentSlot.Name);
 
                     // Destroying all the children is expensive, and usually if we get to this point then the next thing that could go wrong
                     // is not being able to find the memory mapped file, so we'll attempt to find the memory mapped file first.
@@ -333,6 +322,8 @@ namespace ResoniteNESMod
 
             }
 
+
+            /*
 
 
             [HarmonyPatch(typeof(FrooxEngine.Animator), "OnCommonUpdate")]
@@ -485,6 +476,7 @@ namespace ResoniteNESMod
                     }
                 }
             }
+            */
 
             [HarmonyPatch(typeof(ResoniteModLoader.ModConfiguration), "FireConfigurationChangedEvent")]
             public static class FireConfigurationChangedEventPatcher
