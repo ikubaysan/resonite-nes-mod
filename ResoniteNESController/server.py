@@ -58,6 +58,14 @@ def on_message(client, server, message):
             else:
                 vj.set_button(BUTTON_MAP[btn_name], 0)
         else:
+            if btn_name == "u":
+                vj.set_button(BUTTON_MAP["d"], 0)
+            elif btn_name == "d":
+                vj.set_button(BUTTON_MAP["u"], 0)
+            elif btn_name == "l":
+                vj.set_button(BUTTON_MAP["r"], 0)
+            elif btn_name == "r":
+                vj.set_button(BUTTON_MAP["l"], 0)
             vj.set_button(BUTTON_MAP[btn_name], action)
         print(f"Button {btn_name} {'pressed' if action else 'released'}")
     else:
