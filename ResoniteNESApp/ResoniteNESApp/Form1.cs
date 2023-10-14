@@ -10,6 +10,7 @@ using System.Windows.Forms;
 using System.IO.MemoryMappedFiles;
 using System.IO;
 using System.Runtime.InteropServices;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 
 namespace ResoniteNESApp
@@ -201,9 +202,9 @@ namespace ResoniteNESApp
             }
         }
 
-        private void textBox1_TextChanged(object sender, EventArgs e)
+        private void targetWindowTextBox_TextChanged(object sender, EventArgs e)
         {
-            targetWindowTitle = textBox1.Text;
+            targetWindowTitle = targetWindowTextBox.Text;
         }
 
         private void textBox6_TextChanged(object sender, EventArgs e)
@@ -236,5 +237,27 @@ namespace ResoniteNESApp
             }
         }
 
+        private void consolePresetComboBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            string selectedValue = consolePresetComboBox.SelectedItem.ToString();
+            if (selectedValue == "NES")
+            {
+                targetWindowTextBox.Text = "FCEUX";
+                canvasWidthTextBox.Text = "256";
+                canvasHeightTextBox.Text = "240";
+            }
+            else if (selectedValue == "GBA")
+            {
+                targetWindowTextBox.Text = "mGBA";
+                canvasWidthTextBox.Text = "240";
+                canvasHeightTextBox.Text = "160";
+            }
+            else if (selectedValue == "GB")
+            {
+                targetWindowTextBox.Text = "mGBA";
+                canvasWidthTextBox.Text = "160";
+                canvasHeightTextBox.Text = "144";
+            }
+        }
     }
 }

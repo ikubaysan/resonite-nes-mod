@@ -29,7 +29,7 @@
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
-            this.textBox1 = new System.Windows.Forms.TextBox();
+            this.targetWindowTextBox = new System.Windows.Forms.TextBox();
             this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.button1 = new System.Windows.Forms.Button();
             this.panel1 = new System.Windows.Forms.Panel();
@@ -37,6 +37,8 @@
             this.label1 = new System.Windows.Forms.Label();
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.tabPage1 = new System.Windows.Forms.TabPage();
+            this.consolePresetComboBox = new System.Windows.Forms.ComboBox();
+            this.label13 = new System.Windows.Forms.Label();
             this.canvasWidthLabel = new System.Windows.Forms.Label();
             this.canvasWidthTextBox = new System.Windows.Forms.TextBox();
             this.canvasHeightLabel = new System.Windows.Forms.Label();
@@ -72,14 +74,14 @@
             this.tabPage1.SuspendLayout();
             this.SuspendLayout();
             // 
-            // textBox1
+            // targetWindowTextBox
             // 
-            this.textBox1.Location = new System.Drawing.Point(125, 375);
-            this.textBox1.Name = "textBox1";
-            this.textBox1.Size = new System.Drawing.Size(100, 20);
-            this.textBox1.TabIndex = 0;
-            this.textBox1.Text = "FCEUX";
-            this.textBox1.TextChanged += new System.EventHandler(this.textBox1_TextChanged);
+            this.targetWindowTextBox.Location = new System.Drawing.Point(125, 375);
+            this.targetWindowTextBox.Name = "targetWindowTextBox";
+            this.targetWindowTextBox.Size = new System.Drawing.Size(100, 20);
+            this.targetWindowTextBox.TabIndex = 0;
+            this.targetWindowTextBox.Text = "FCEUX";
+            this.targetWindowTextBox.TextChanged += new System.EventHandler(this.targetWindowTextBox_TextChanged);
             // 
             // contextMenuStrip1
             // 
@@ -131,6 +133,8 @@
             // 
             // tabPage1
             // 
+            this.tabPage1.Controls.Add(this.consolePresetComboBox);
+            this.tabPage1.Controls.Add(this.label13);
             this.tabPage1.Controls.Add(this.canvasWidthLabel);
             this.tabPage1.Controls.Add(this.canvasWidthTextBox);
             this.tabPage1.Controls.Add(this.canvasHeightLabel);
@@ -160,7 +164,7 @@
             this.tabPage1.Controls.Add(this.label3);
             this.tabPage1.Controls.Add(this.checkBox1);
             this.tabPage1.Controls.Add(this.label2);
-            this.tabPage1.Controls.Add(this.textBox1);
+            this.tabPage1.Controls.Add(this.targetWindowTextBox);
             this.tabPage1.Controls.Add(this.pictureBox1);
             this.tabPage1.Controls.Add(this.label1);
             this.tabPage1.Controls.Add(this.panel1);
@@ -172,6 +176,28 @@
             this.tabPage1.TabIndex = 0;
             this.tabPage1.Text = "tabPage1";
             this.tabPage1.UseVisualStyleBackColor = true;
+            // 
+            // consolePresetComboBox
+            // 
+            this.consolePresetComboBox.FormattingEnabled = true;
+            this.consolePresetComboBox.Items.AddRange(new object[] {
+            "NES",
+            "GB",
+            "GBA"});
+            this.consolePresetComboBox.Location = new System.Drawing.Point(3, 374);
+            this.consolePresetComboBox.Name = "consolePresetComboBox";
+            this.consolePresetComboBox.Size = new System.Drawing.Size(100, 21);
+            this.consolePresetComboBox.TabIndex = 37;
+            this.consolePresetComboBox.SelectedIndexChanged += new System.EventHandler(this.consolePresetComboBox_SelectedIndexChanged);
+            // 
+            // label13
+            // 
+            this.label13.AutoSize = true;
+            this.label13.Location = new System.Drawing.Point(8, 347);
+            this.label13.Name = "label13";
+            this.label13.Size = new System.Drawing.Size(78, 13);
+            this.label13.TabIndex = 36;
+            this.label13.Text = "Console Preset";
             // 
             // canvasWidthLabel
             // 
@@ -248,8 +274,6 @@
             // rowExpansionCheckBox
             // 
             this.rowExpansionCheckBox.AutoSize = true;
-            this.rowExpansionCheckBox.Checked = true;
-            this.rowExpansionCheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
             this.rowExpansionCheckBox.Location = new System.Drawing.Point(258, 140);
             this.rowExpansionCheckBox.Name = "rowExpansionCheckBox";
             this.rowExpansionCheckBox.Size = new System.Drawing.Size(100, 17);
@@ -344,6 +368,8 @@
             // checkBox3
             // 
             this.checkBox3.AutoSize = true;
+            this.checkBox3.Checked = true;
+            this.checkBox3.CheckState = System.Windows.Forms.CheckState.Checked;
             this.checkBox3.Location = new System.Drawing.Point(258, 68);
             this.checkBox3.Name = "checkBox3";
             this.checkBox3.Size = new System.Drawing.Size(111, 30);
@@ -476,7 +502,7 @@
 
         #endregion
 
-        private System.Windows.Forms.TextBox textBox1;
+        private System.Windows.Forms.TextBox targetWindowTextBox;
         private System.Windows.Forms.ContextMenuStrip contextMenuStrip1;
         private System.Windows.Forms.Button button1;
         private System.Windows.Forms.Panel panel1;
@@ -514,6 +540,8 @@
         private System.Windows.Forms.TextBox canvasWidthTextBox;
         private System.Windows.Forms.Label canvasHeightLabel;
         private System.Windows.Forms.TextBox canvasHeightTextBox;
+        private System.Windows.Forms.ComboBox consolePresetComboBox;
+        private System.Windows.Forms.Label label13;
     }
 }
 
